@@ -18,7 +18,16 @@ const (
 )
 
 var modes = []string{"fast", "slow", "normal"}
-var modeDescs = []string{"type as fast as you can", "do not make any mistake", "type at normal speed, avoid mistakes"}
+var modeDescs = []string{
+	"type as fast as you can",
+	"do not make any mistake",
+	"type at normal speed, avoid mistakes",
+}
+var modeColor = []termbox.Attribute{
+	termbox.ColorGreen | termbox.AttrBold,
+	termbox.ColorMagenta | termbox.AttrBold,
+	termbox.ColorYellow | termbox.AttrBold,
+}
 
 func (m Mode) Name() string {
 	return modes[m]
@@ -28,18 +37,26 @@ func (m Mode) Desc() string {
 	return modeDescs[m]
 }
 
+func (m Mode) Attr() termbox.Attribute {
+	return modeColor[m]
+}
+
 type round struct {
 	startedAt  time.Time
 	finishedAt time.Time
+	failedAt   time.Time
 	errors     int
 }
 
 type state struct {
-	count  int
 	text   string
 	input  string
 	rounds [3]round
 	mode   Mode
+}
+
+func (s state) ShowFail() bool {
+	return time.Now().Sub(s.rounds[s.mode].failedAt).Seconds() < 3
 }
 
 func min(a, b int) int {
@@ -91,16 +108,22 @@ func render(s state) {
 
 	w, h := termbox.Size()
 
-	tbPrint((w/2)-(len(s.text)/2), h/2, termbox.ColorDefault, termbox.ColorDefault, s.text+string('⏎'))
-
 	byteOffset, runeOffset := errorOffset(s.text, s.input)
-	tbPrints((w/2)-(len(s.text)/2), h/2, termbox.ColorGreen, termbox.ColorDefault, s.input[:byteOffset])
-	tbPrints((w/2)-(len(s.text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.input[byteOffset:])
+
+	if s.ShowFail() {
+		msg := "FAIL! Let's do this again..."
+		tbPrint((w/2)-(len(msg)/2), h/2, termbox.ColorRed|termbox.AttrBold, termbox.ColorDefault, msg)
+	} else {
+		tbPrint((w/2)-(len(s.text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.text+string('⏎'))
+
+		tbPrints((w/2)-(len(s.text)/2), h/2, termbox.ColorGreen, termbox.ColorDefault, s.input[:byteOffset])
+		tbPrints((w/2)-(len(s.text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.input[byteOffset:])
+	}
 
 	mode := "In " + s.mode.Name() + " mode"
-	tbPrint((w/2)-(len(mode)/2), h/2-4, termbox.ColorWhite, termbox.ColorDefault, mode)
+	tbPrint((w/2)-(len(mode)/2), h/2-4, s.mode.Attr(), termbox.ColorDefault, mode)
 	modeDesc := "(" + s.mode.Desc() + "!)"
-	tbPrint((w/2)-(len(modeDesc)/2), h/2-3, termbox.ColorWhite, termbox.ColorDefault, modeDesc)
+	tbPrint((w/2)-(len(modeDesc)/2), h/2-3, termbox.ColorDefault, termbox.ColorDefault, modeDesc)
 
 	cps := 0.
 	seconds := 0.
@@ -117,11 +140,15 @@ func render(s state) {
 		}
 	}
 
-	stats := fmt.Sprintf("%d errors, %.1f s, %.2f cps, %d wpm", s.rounds[s.mode].errors, seconds, cps, int(wpm))
-	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorWhite, termbox.ColorDefault, stats)
+	stats := fmt.Sprintf("%3d errors, %4.1f s, %5.2f cps, %3d wpm", s.rounds[s.mode].errors, seconds, cps, int(wpm))
+	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
 }
 
 func reduce(s state, ev termbox.Event) state {
+	if s.ShowFail() {
+		return s
+	}
+
 	if s.rounds[s.mode].startedAt.IsZero() {
 		s.rounds[s.mode].startedAt = time.Now()
 	}
@@ -132,6 +159,13 @@ func reduce(s state, ev termbox.Event) state {
 			_, l := utf8.DecodeLastRuneInString(s.input)
 			s.input = s.input[:len(s.input)-l]
 		}
+	case termbox.KeyEnter:
+		if s.input == s.text {
+			if s.mode != ModeNormal {
+				s.mode++
+				s.input = ""
+			}
+		}
 	case termbox.KeySpace:
 		s.input += " "
 	default:
@@ -139,6 +173,11 @@ func reduce(s state, ev termbox.Event) state {
 			s.input += string(ev.Ch)
 			if len(s.input) > len(s.text) || s.input != s.text[:len(s.input)] {
 				s.rounds[s.mode].errors++
+			}
+
+			if s.mode == ModeSlow && s.input != s.text[:len(s.input)] {
+				s.input = ""
+				s.rounds[s.mode].failedAt = time.Now()
 			}
 		}
 

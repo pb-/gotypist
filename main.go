@@ -174,13 +174,13 @@ func reduce(s state, ev termbox.Event) state {
 			if len(s.input) > len(s.text) || s.input != s.text[:len(s.input)] {
 				s.rounds[s.mode].errors++
 			}
-
-			if s.mode == ModeSlow && s.input != s.text[:len(s.input)] {
-				s.input = ""
-				s.rounds[s.mode].failedAt = time.Now()
-			}
 		}
 
+	}
+
+	if s.mode == ModeSlow && s.input != s.text[:len(s.input)] {
+		s.input = ""
+		s.rounds[s.mode].failedAt = time.Now()
 	}
 
 	return s

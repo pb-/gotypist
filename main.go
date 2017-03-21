@@ -75,6 +75,10 @@ func (s *State) ShowFail(t time.Time) bool {
 	return s.Mode == ModeSlow && t.Sub(s.CurrentRound().FailedAt) < FailPenaltyDuration
 }
 
+func (s *State) HighlightError(t time.Time) bool {
+	return s.Mode == ModeFast && t.Sub(s.CurrentRound().FailedAt) < FastErrorHighlightDuration
+}
+
 func (s *State) IsErrorWith(ch rune) bool {
 	input := s.Input + string(ch)
 	return len(input) > len(s.Text) || input != s.Text[:len(input)]
@@ -83,9 +87,8 @@ func (s *State) IsErrorWith(ch rune) bool {
 func min(a, b int) int {
 	if a < b {
 		return a
-	} else {
-		return b
 	}
+	return b
 }
 
 func tbPrint(x, y int, fg, bg termbox.Attribute, msg string) {
@@ -163,7 +166,14 @@ func render(s State, now time.Time) {
 	}
 
 	stats := fmt.Sprintf("%3d errors, %4.1f s, %5.2f cps, %3d wpm", s.CurrentRound().Errors, seconds, cps, int(wpm))
-	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
+
+	var color termbox.Attribute
+	if s.HighlightError(now) {
+		color = termbox.ColorYellow | termbox.AttrBold
+	} else {
+		color = termbox.ColorDefault
+	}
+	tbPrint((w/2)-(len(stats)/2), h/2+4, color, termbox.ColorDefault, stats)
 }
 
 func reduce(s State, ev termbox.Event, now time.Time) State {
@@ -207,6 +217,8 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 					}
 				} else if s.Mode == ModeNormal {
 					s.Input += string(ch)
+				} else if s.Mode == ModeFast {
+					s.Timeouts[now.Add(FastErrorHighlightDuration)] = true
 				}
 			} else {
 				s.Input += string(ch)

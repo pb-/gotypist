@@ -67,6 +67,14 @@ type State struct {
 	Mode     Mode
 }
 
+type Statistics struct {
+	Text       string    `json:"text"`
+	StartedAt  time.Time `json:"started_at"`
+	FinishedAt time.Time `json:"finished_at"`
+	Errors     int       `json:"errors"`
+	Mode       Mode      `json:"mode"`
+}
+
 func NewState(rand *rand.Rand, words []string) *State {
 	return &State{
 		Timeouts: make(map[time.Time]bool),

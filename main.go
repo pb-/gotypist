@@ -19,6 +19,7 @@ const (
 
 const FailPenaltySeconds = 3
 const FailPenaltyDuration = time.Second * FailPenaltySeconds
+const FastErrorHighlightDuration = time.Millisecond * 333
 
 var modes = []string{"fast", "slow", "normal"}
 var modeDescs = []string{
@@ -71,7 +72,12 @@ func (s *State) CurrentRound() *Round {
 }
 
 func (s *State) ShowFail(t time.Time) bool {
-	return t.Sub(s.CurrentRound().FailedAt) < FailPenaltyDuration
+	return s.Mode == ModeSlow && t.Sub(s.CurrentRound().FailedAt) < FailPenaltyDuration
+}
+
+func (s *State) IsErrorWith(ch rune) bool {
+	input := s.Input + string(ch)
+	return len(input) > len(s.Text) || input != s.Text[:len(input)]
 }
 
 func min(a, b int) int {
@@ -182,24 +188,31 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 				s.Input = ""
 			}
 		}
-	case termbox.KeySpace:
-		s.Input += " "
 	default:
-		if ev.Ch != 0 {
-			s.Input += string(ev.Ch)
-			if len(s.Input) > len(s.Text) || s.Input != s.Text[:len(s.Input)] {
+		var ch rune
+		if ev.Key == termbox.KeySpace {
+			ch = ' '
+		} else {
+			ch = ev.Ch
+		}
+
+		if ch != 0 {
+			if s.IsErrorWith(ch) {
 				s.CurrentRound().Errors++
+				s.CurrentRound().FailedAt = now
+				if s.Mode == ModeSlow {
+					s.Input = ""
+					for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
+						s.Timeouts[now.Add(time.Second*t)] = true
+					}
+				} else if s.Mode == ModeNormal {
+					s.Input += string(ch)
+				}
+			} else {
+				s.Input += string(ch)
 			}
 		}
 
-	}
-
-	if s.Mode == ModeSlow && s.Input != s.Text[:len(s.Input)] {
-		s.Input = ""
-		s.CurrentRound().FailedAt = now
-		for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
-			s.Timeouts[now.Add(time.Second*t)] = true
-		}
 	}
 
 	for k := range s.Timeouts {

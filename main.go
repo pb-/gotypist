@@ -218,7 +218,8 @@ func render(s State, now time.Time) {
 		}
 	}
 
-	stats := fmt.Sprintf("%3d errors, %4.1f s, %5.2f cps, %3d wpm", s.CurrentRound().Errors, seconds, cps, int(wpm))
+	stats := fmt.Sprintf("%3d errors  %4.1f s  %5.2f cps  %3d wpm", s.CurrentRound().Errors, seconds, cps, int(wpm))
+	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
 
 	var color termbox.Attribute
 	if s.HighlightError(now) {
@@ -226,7 +227,8 @@ func render(s State, now time.Time) {
 	} else {
 		color = termbox.ColorDefault
 	}
-	tbPrint((w/2)-(len(stats)/2), h/2+4, color, termbox.ColorDefault, stats)
+	errors := fmt.Sprintf("%3d errors", s.CurrentRound().Errors)
+	tbPrint((w/2)-(len(stats)/2), h/2+4, color, termbox.ColorDefault, errors)
 
 	tbPrint(1, h-3, termbox.ColorDefault, termbox.ColorDefault,
 		"What's this fast, slow, medium thing?!")
@@ -325,7 +327,7 @@ func main() {
 	termbox.SetInputMode(termbox.InputEsc)
 
 	go func() {
-		for _ = range time.Tick(time.Millisecond * 250) {
+		for range time.Tick(time.Millisecond * 250) {
 			termbox.Interrupt()
 		}
 	}()

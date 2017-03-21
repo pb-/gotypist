@@ -236,6 +236,25 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	return s
 }
 
+func manageTimers(timers, timeouts map[time.Time]bool, now time.Time, interruptFunc func()) map[time.Time]bool {
+	// remove old timers
+	for t := range timers {
+		if _, ok := timeouts[t]; !ok {
+			delete(timers, t)
+		}
+	}
+
+	// set up new timers
+	for t := range timeouts {
+		if _, ok := timers[t]; !ok {
+			timers[t] = true
+			time.AfterFunc(t.Sub(now), interruptFunc)
+		}
+	}
+
+	return timers
+}
+
 func main() {
 	err := termbox.Init()
 	if err != nil {
@@ -270,21 +289,7 @@ func main() {
 		}
 
 		render(state, now)
-
-		// remove old timers
-		for t := range timers {
-			if _, ok := state.Timeouts[t]; !ok {
-				delete(timers, t)
-			}
-		}
-
-		// set up new timers
-		for t := range state.Timeouts {
-			if _, ok := timers[t]; !ok {
-				timers[t] = true
-				time.AfterFunc(t.Sub(now), termbox.Interrupt)
-			}
-		}
+		timers = manageTimers(timers, state.Timeouts, now, termbox.Interrupt)
 	}
 
 }

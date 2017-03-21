@@ -17,6 +17,9 @@ const (
 	ModeNormal
 )
 
+const FailPenaltySeconds = 3
+const FailPenaltyDuration = time.Second * FailPenaltySeconds
+
 var modes = []string{"fast", "slow", "normal"}
 var modeDescs = []string{
 	"type as fast as you can",
@@ -67,8 +70,8 @@ func (s *State) CurrentRound() *Round {
 	return &s.Rounds[s.Mode]
 }
 
-func (s *State) ShowFail() bool {
-	return time.Now().Sub(s.CurrentRound().FailedAt).Seconds() < 3
+func (s *State) ShowFail(t time.Time) bool {
+	return t.Sub(s.CurrentRound().FailedAt) < FailPenaltyDuration
 }
 
 func min(a, b int) int {
@@ -114,7 +117,7 @@ func errorOffset(text string, input string) (int, int) {
 	return min(len(input), len(text)), runeOffset
 }
 
-func render(s State) {
+func render(s State, now time.Time) {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	defer termbox.Flush()
 
@@ -122,8 +125,9 @@ func render(s State) {
 
 	byteOffset, runeOffset := errorOffset(s.Text, s.Input)
 
-	if s.ShowFail() {
-		msg := "FAIL! Let's do this again..."
+	if s.ShowFail(now) {
+		left := min(int(s.CurrentRound().FailedAt.Add(FailPenaltyDuration).Sub(now).Seconds()+1), FailPenaltySeconds)
+		msg := fmt.Sprintf("FAIL! Let's do this again in %d...", left)
 		tbPrint((w/2)-(len(msg)/2), h/2, termbox.ColorRed|termbox.AttrBold, termbox.ColorDefault, msg)
 	} else {
 		tbPrint((w/2)-(len(s.Text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.Text+string('⏎'))
@@ -142,7 +146,7 @@ func render(s State) {
 	wpm := 0.
 
 	if !s.CurrentRound().StartedAt.IsZero() {
-		delta := time.Now().Sub(s.CurrentRound().StartedAt)
+		delta := now.Sub(s.CurrentRound().StartedAt)
 		seconds = delta.Seconds()
 		if seconds > 0. {
 			runeCount := utf8.RuneCountInString(s.Input[:byteOffset])
@@ -157,7 +161,7 @@ func render(s State) {
 }
 
 func reduce(s State, ev termbox.Event, now time.Time) State {
-	if s.ShowFail() {
+	if s.ShowFail(now) {
 		return s
 	}
 
@@ -193,7 +197,9 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	if s.Mode == ModeSlow && s.Input != s.Text[:len(s.Input)] {
 		s.Input = ""
 		s.CurrentRound().FailedAt = now
-		s.Timeouts[now.Add(time.Second*3)] = true
+		for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
+			s.Timeouts[now.Add(time.Second*t)] = true
+		}
 	}
 
 	for k := range s.Timeouts {
@@ -222,20 +228,23 @@ func main() {
 	state := *NewState("the quick brown fox jumps over the lazy dog")
 	timers := make(map[time.Time]bool)
 
-	render(state)
+	render(state, time.Now())
 	for {
-		switch ev := termbox.PollEvent(); ev.Type {
+		ev := termbox.PollEvent()
+		now := time.Now()
+
+		switch ev.Type {
 		case termbox.EventKey:
 			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 				return
 			}
-			state = reduce(state, ev, time.Now())
+			state = reduce(state, ev, now)
 		case termbox.EventError:
 			panic(ev.Err)
 		case termbox.EventInterrupt:
 		}
 
-		render(state)
+		render(state, now)
 
 		// remove old timers
 		for t := range timers {
@@ -248,7 +257,7 @@ func main() {
 		for t := range state.Timeouts {
 			if _, ok := timers[t]; !ok {
 				timers[t] = true
-				time.AfterFunc(t.Sub(time.Now()), termbox.Interrupt)
+				time.AfterFunc(t.Sub(now), termbox.Interrupt)
 			}
 		}
 	}

@@ -220,12 +220,13 @@ func main() {
 	}()
 
 	state := *NewState("the quick brown fox jumps over the lazy dog")
+	timers := make(map[time.Time]bool)
 
 	render(state)
 	for {
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
-			if ev.Key == termbox.KeyEsc {
+			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 				return
 			}
 			state = reduce(state, ev, time.Now())
@@ -235,5 +236,21 @@ func main() {
 		}
 
 		render(state)
+
+		// remove old timers
+		for t := range timers {
+			if _, ok := state.Timeouts[t]; !ok {
+				delete(timers, t)
+			}
+		}
+
+		// set up new timers
+		for t := range state.Timeouts {
+			if _, ok := timers[t]; !ok {
+				timers[t] = true
+				time.AfterFunc(t.Sub(time.Now()), termbox.Interrupt)
+			}
+		}
 	}
+
 }

@@ -145,9 +145,9 @@ func render(s State, now time.Time) {
 		tbPrints((w/2)-(len(s.Text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.Input[byteOffset:])
 	}
 
-	mode := "In " + s.Mode.Name() + " mode"
+	mode := fmt.Sprintf("In %s mode", s.Mode.Name())
 	tbPrint((w/2)-(len(mode)/2), h/2-4, s.Mode.Attr(), termbox.ColorDefault, mode)
-	modeDesc := "(" + s.Mode.Desc() + "!)"
+	modeDesc := fmt.Sprintf("(%s!)", s.Mode.Desc())
 	tbPrint((w/2)-(len(modeDesc)/2), h/2-3, termbox.ColorDefault, termbox.ColorDefault, modeDesc)
 
 	cps := 0.

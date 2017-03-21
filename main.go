@@ -1,7 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"math/rand"
+	"os"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -53,6 +58,8 @@ type Round struct {
 }
 
 type State struct {
+	Rand     *rand.Rand
+	Words    []string
 	Timeouts map[time.Time]bool
 	Text     string
 	Input    string
@@ -60,10 +67,12 @@ type State struct {
 	Mode     Mode
 }
 
-func NewState(text string) *State {
+func NewState(rand *rand.Rand, words []string) *State {
 	return &State{
 		Timeouts: make(map[time.Time]bool),
-		Text:     text,
+		Rand:     rand,
+		Words:    words,
+		Text:     generateText(rand, words),
 	}
 }
 
@@ -89,6 +98,50 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func generateText(rand *rand.Rand, words []string) string {
+	var w []string
+	l := int(rand.Int31n(4) + 4)
+	for len(w) < l {
+		w = append(w, words[rand.Int31n(int32(len(words)))])
+	}
+	return strings.Join(w, " ")
+}
+
+func readWords(path string) ([]string, error) {
+	var words []string
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open words: %s", err)
+	}
+	defer file.Close()
+
+	pattern := regexp.MustCompile(`^\w+$`)
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				return words, nil
+			}
+			return nil, fmt.Errorf("failed to read words: %s", err)
+		}
+
+		trimmed := strings.TrimSpace(line)
+		if pattern.MatchString(trimmed) && len(trimmed) < 8 {
+			words = append(words, trimmed)
+		}
+	}
+}
+
+func getWords(path string) []string {
+	words, err := readWords(path)
+	if err != nil || len(words) < 9 {
+		return []string{"the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"}
+	}
+	return words
 }
 
 func tbPrint(x, y int, fg, bg termbox.Attribute, msg string) {
@@ -203,7 +256,7 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 				s.Mode++
 				s.Input = ""
 			} else {
-				return *NewState(s.Text)
+				return *NewState(s.Rand, s.Words)
 			}
 		}
 	default:
@@ -277,7 +330,7 @@ func main() {
 		}
 	}()
 
-	state := *NewState("the quick brown fox jumps over the lazy dog")
+	state := *NewState(rand.New(rand.NewSource(0)), getWords("/usr/share/dict/words"))
 	timers := make(map[time.Time]bool)
 
 	render(state, time.Now())

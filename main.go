@@ -41,22 +41,34 @@ func (m Mode) Attr() termbox.Attribute {
 	return modeColor[m]
 }
 
-type round struct {
-	startedAt  time.Time
-	finishedAt time.Time
-	failedAt   time.Time
-	errors     int
+type Round struct {
+	StartedAt  time.Time
+	FinishedAt time.Time
+	FailedAt   time.Time
+	Errors     int
 }
 
-type state struct {
-	text   string
-	input  string
-	rounds [3]round
-	mode   Mode
+type State struct {
+	Timeouts map[time.Time]bool
+	Text     string
+	Input    string
+	Rounds   [3]Round
+	Mode     Mode
 }
 
-func (s state) ShowFail() bool {
-	return time.Now().Sub(s.rounds[s.mode].failedAt).Seconds() < 3
+func NewState(text string) *State {
+	return &State{
+		Timeouts: make(map[time.Time]bool),
+		Text:     text,
+	}
+}
+
+func (s *State) CurrentRound() *Round {
+	return &s.Rounds[s.Mode]
+}
+
+func (s *State) ShowFail() bool {
+	return time.Now().Sub(s.CurrentRound().FailedAt).Seconds() < 3
 }
 
 func min(a, b int) int {
@@ -102,85 +114,92 @@ func errorOffset(text string, input string) (int, int) {
 	return min(len(input), len(text)), runeOffset
 }
 
-func render(s state) {
+func render(s State) {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	defer termbox.Flush()
 
 	w, h := termbox.Size()
 
-	byteOffset, runeOffset := errorOffset(s.text, s.input)
+	byteOffset, runeOffset := errorOffset(s.Text, s.Input)
 
 	if s.ShowFail() {
 		msg := "FAIL! Let's do this again..."
 		tbPrint((w/2)-(len(msg)/2), h/2, termbox.ColorRed|termbox.AttrBold, termbox.ColorDefault, msg)
 	} else {
-		tbPrint((w/2)-(len(s.text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.text+string('⏎'))
+		tbPrint((w/2)-(len(s.Text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.Text+string('⏎'))
 
-		tbPrints((w/2)-(len(s.text)/2), h/2, termbox.ColorGreen, termbox.ColorDefault, s.input[:byteOffset])
-		tbPrints((w/2)-(len(s.text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.input[byteOffset:])
+		tbPrints((w/2)-(len(s.Text)/2), h/2, termbox.ColorGreen, termbox.ColorDefault, s.Input[:byteOffset])
+		tbPrints((w/2)-(len(s.Text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.Input[byteOffset:])
 	}
 
-	mode := "In " + s.mode.Name() + " mode"
-	tbPrint((w/2)-(len(mode)/2), h/2-4, s.mode.Attr(), termbox.ColorDefault, mode)
-	modeDesc := "(" + s.mode.Desc() + "!)"
+	mode := "In " + s.Mode.Name() + " mode"
+	tbPrint((w/2)-(len(mode)/2), h/2-4, s.Mode.Attr(), termbox.ColorDefault, mode)
+	modeDesc := "(" + s.Mode.Desc() + "!)"
 	tbPrint((w/2)-(len(modeDesc)/2), h/2-3, termbox.ColorDefault, termbox.ColorDefault, modeDesc)
 
 	cps := 0.
 	seconds := 0.
 	wpm := 0.
 
-	if !s.rounds[s.mode].startedAt.IsZero() {
-		delta := time.Now().Sub(s.rounds[s.mode].startedAt)
+	if !s.CurrentRound().StartedAt.IsZero() {
+		delta := time.Now().Sub(s.CurrentRound().StartedAt)
 		seconds = delta.Seconds()
 		if seconds > 0. {
-			runeCount := utf8.RuneCountInString(s.input[:byteOffset])
+			runeCount := utf8.RuneCountInString(s.Input[:byteOffset])
 			cps = float64(runeCount) / seconds
-			wordCount := len(strings.Split(s.input[:byteOffset], " "))
+			wordCount := len(strings.Split(s.Input[:byteOffset], " "))
 			wpm = float64(wordCount) * 60 / seconds
 		}
 	}
 
-	stats := fmt.Sprintf("%3d errors, %4.1f s, %5.2f cps, %3d wpm", s.rounds[s.mode].errors, seconds, cps, int(wpm))
+	stats := fmt.Sprintf("%3d errors, %4.1f s, %5.2f cps, %3d wpm", s.CurrentRound().Errors, seconds, cps, int(wpm))
 	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
 }
 
-func reduce(s state, ev termbox.Event) state {
+func reduce(s State, ev termbox.Event, now time.Time) State {
 	if s.ShowFail() {
 		return s
 	}
 
-	if s.rounds[s.mode].startedAt.IsZero() {
-		s.rounds[s.mode].startedAt = time.Now()
+	if s.CurrentRound().StartedAt.IsZero() {
+		s.CurrentRound().StartedAt = now
 	}
 
 	switch ev.Key {
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
-		if len(s.input) > 0 {
-			_, l := utf8.DecodeLastRuneInString(s.input)
-			s.input = s.input[:len(s.input)-l]
+		if len(s.Input) > 0 {
+			_, l := utf8.DecodeLastRuneInString(s.Input)
+			s.Input = s.Input[:len(s.Input)-l]
 		}
 	case termbox.KeyEnter:
-		if s.input == s.text {
-			if s.mode != ModeNormal {
-				s.mode++
-				s.input = ""
+		if s.Input == s.Text {
+			if s.Mode != ModeNormal {
+				s.Mode++
+				s.Input = ""
 			}
 		}
 	case termbox.KeySpace:
-		s.input += " "
+		s.Input += " "
 	default:
 		if ev.Ch != 0 {
-			s.input += string(ev.Ch)
-			if len(s.input) > len(s.text) || s.input != s.text[:len(s.input)] {
-				s.rounds[s.mode].errors++
+			s.Input += string(ev.Ch)
+			if len(s.Input) > len(s.Text) || s.Input != s.Text[:len(s.Input)] {
+				s.CurrentRound().Errors++
 			}
 		}
 
 	}
 
-	if s.mode == ModeSlow && s.input != s.text[:len(s.input)] {
-		s.input = ""
-		s.rounds[s.mode].failedAt = time.Now()
+	if s.Mode == ModeSlow && s.Input != s.Text[:len(s.Input)] {
+		s.Input = ""
+		s.CurrentRound().FailedAt = now
+		s.Timeouts[now.Add(time.Second*3)] = true
+	}
+
+	for k := range s.Timeouts {
+		if k.Before(now) {
+			delete(s.Timeouts, k)
+		}
 	}
 
 	return s
@@ -200,8 +219,7 @@ func main() {
 		}
 	}()
 
-	var state state
-	state.text = "the quick brown fox jumps over the lazy dog"
+	state := *NewState("the quick brown fox jumps over the lazy dog")
 
 	render(state)
 	for {
@@ -210,7 +228,7 @@ func main() {
 			if ev.Key == termbox.KeyEsc {
 				return
 			}
-			state = reduce(state, ev)
+			state = reduce(state, ev, time.Now())
 		case termbox.EventError:
 			panic(ev.Err)
 		case termbox.EventInterrupt:

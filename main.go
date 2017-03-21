@@ -198,6 +198,7 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		}
 	case termbox.KeyEnter:
 		if s.Input == s.Text {
+			s.CurrentRound().FinishedAt = now
 			if s.Mode != ModeNormal {
 				s.Mode++
 				s.Input = ""

@@ -118,7 +118,7 @@ func readWords(path string) ([]string, error) {
 	}
 	defer file.Close()
 
-	pattern := regexp.MustCompile(`^\w+$`)
+	pattern := regexp.MustCompile(`^[a-z]+$`)
 	reader := bufio.NewReader(file)
 	for {
 		line, err := reader.ReadString('\n')
@@ -330,7 +330,7 @@ func main() {
 		}
 	}()
 
-	state := *NewState(rand.New(rand.NewSource(0)), getWords("/usr/share/dict/words"))
+	state := *NewState(rand.New(rand.NewSource(time.Now().UnixNano())), getWords("/usr/share/dict/words"))
 	timers := make(map[time.Time]bool)
 
 	render(state, time.Now())

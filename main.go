@@ -23,8 +23,8 @@ const FastErrorHighlightDuration = time.Millisecond * 333
 
 var modes = []string{"fast", "slow", "normal"}
 var modeDescs = []string{
-	"type as fast as you can",
-	"do not make any mistake",
+	"type as fast as you can, ignore mistakes",
+	"go slow, do not make any mistake",
 	"type at normal speed, avoid mistakes",
 }
 var modeColor = []termbox.Attribute{
@@ -174,6 +174,11 @@ func render(s State, now time.Time) {
 		color = termbox.ColorDefault
 	}
 	tbPrint((w/2)-(len(stats)/2), h/2+4, color, termbox.ColorDefault, stats)
+
+	tbPrint(1, h-3, termbox.ColorDefault, termbox.ColorDefault,
+		"What's this fast, slow, medium thing?!")
+	tbPrint(1, h-2, termbox.ColorDefault, termbox.ColorDefault,
+		"http://steve-yegge.blogspot.com/2008/09/programmings-dirtiest-little-secret.html")
 }
 
 func reduce(s State, ev termbox.Event, now time.Time) State {
@@ -196,6 +201,8 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 			if s.Mode != ModeNormal {
 				s.Mode++
 				s.Input = ""
+			} else {
+				return *NewState(s.Text)
 			}
 		}
 	default:

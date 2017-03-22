@@ -187,6 +187,20 @@ func errorOffset(text string, input string) (int, int) {
 	return min(len(input), len(text)), runeOffset
 }
 
+func computeStats(text string, start, end time.Time) (seconds, cps, wpm float64) {
+	if !start.IsZero() {
+		seconds = end.Sub(start).Seconds()
+		if seconds > 0. {
+			runeCount := utf8.RuneCountInString(text)
+			cps = float64(runeCount) / seconds
+			wordCount := len(strings.Split(text, " "))
+			wpm = float64(wordCount) * 60 / seconds
+		}
+	}
+
+	return seconds, cps, wpm
+}
+
 func render(s State, now time.Time) {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	defer termbox.Flush()
@@ -211,21 +225,7 @@ func render(s State, now time.Time) {
 	modeDesc := fmt.Sprintf("(%s!)", s.Mode.Desc())
 	tbPrint((w/2)-(len(modeDesc)/2), h/2-3, termbox.ColorDefault, termbox.ColorDefault, modeDesc)
 
-	cps := 0.
-	seconds := 0.
-	wpm := 0.
-
-	if !s.CurrentRound().StartedAt.IsZero() {
-		delta := now.Sub(s.CurrentRound().StartedAt)
-		seconds = delta.Seconds()
-		if seconds > 0. {
-			runeCount := utf8.RuneCountInString(s.Input[:byteOffset])
-			cps = float64(runeCount) / seconds
-			wordCount := len(strings.Split(s.Input[:byteOffset], " "))
-			wpm = float64(wordCount) * 60 / seconds
-		}
-	}
-
+	seconds, cps, wpm := computeStats(s.Input[:byteOffset], s.CurrentRound().StartedAt, now)
 	stats := fmt.Sprintf("%3d errors  %4.1f s  %5.2f cps  %3d wpm", s.CurrentRound().Errors, seconds, cps, int(wpm))
 	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
 

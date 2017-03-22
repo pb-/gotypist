@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -51,10 +52,9 @@ func (m Mode) Attr() termbox.Attribute {
 }
 
 type Round struct {
-	StartedAt  time.Time
-	FinishedAt time.Time
-	FailedAt   time.Time
-	Errors     int
+	StartedAt time.Time
+	FailedAt  time.Time
+	Errors    int
 }
 
 type State struct {
@@ -73,6 +73,9 @@ type Statistics struct {
 	FinishedAt time.Time `json:"finished_at"`
 	Errors     int       `json:"errors"`
 	Mode       Mode      `json:"mode"`
+	Seconds    float64   `json:"seconds"`
+	CPS        float64   `json:"cps"`
+	WPM        float64   `json:"wpm"`
 }
 
 func NewState(rand *rand.Rand, words []string) *State {
@@ -261,7 +264,6 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		}
 	case termbox.KeyEnter:
 		if s.Input == s.Text {
-			s.CurrentRound().FinishedAt = now
 			if s.Mode != ModeNormal {
 				s.Mode++
 				s.Input = ""
@@ -326,6 +328,46 @@ func manageTimers(timers, timeouts map[time.Time]bool, now time.Time, interruptF
 	return timers
 }
 
+func must(errArg int) func(...interface{}) {
+	return func(retval ...interface{}) {
+		if err := retval[errArg]; err != nil {
+			panic(err)
+		}
+	}
+}
+
+func logStatistics(state *State, ev termbox.Event, now time.Time) {
+	if ev.Key == termbox.KeyEnter && state.Input == state.Text {
+		seconds, cps, wpm := computeStats(
+			state.Text, state.CurrentRound().StartedAt, now)
+		stats := Statistics{
+			Text:       state.Text,
+			StartedAt:  state.CurrentRound().StartedAt,
+			FinishedAt: now,
+			Errors:     state.CurrentRound().Errors,
+			Mode:       state.Mode,
+			Seconds:    seconds,
+			CPS:        cps,
+			WPM:        wpm,
+		}
+
+		f, err := os.OpenFile(os.Getenv("HOME")+"/.gotype.stats",
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		data, err := json.Marshal(stats)
+		if err != nil {
+			panic(err)
+		}
+
+		must(1)(f.Write(data))
+		must(1)(f.Write([]byte("\n")))
+	}
+}
+
 func main() {
 	err := termbox.Init()
 	if err != nil {
@@ -353,6 +395,7 @@ func main() {
 			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 				return
 			}
+			logStatistics(&state, ev, now)
 			state = reduce(state, ev, now)
 		case termbox.EventError:
 			panic(ev.Err)

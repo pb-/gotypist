@@ -95,8 +95,11 @@ func (s *State) ShowFail(t time.Time) bool {
 	return s.Mode == ModeSlow && t.Sub(s.CurrentRound().FailedAt) < FailPenaltyDuration
 }
 
-func (s *State) HighlightError(t time.Time) bool {
-	return s.Mode == ModeFast && t.Sub(s.CurrentRound().FailedAt) < FastErrorHighlightDuration
+func (s *State) ErrorCountColor(t time.Time) termbox.Attribute {
+	if s.Mode == ModeFast && t.Sub(s.CurrentRound().FailedAt) < FastErrorHighlightDuration {
+		return termbox.ColorYellow | termbox.AttrBold
+	}
+	return termbox.ColorDefault
 }
 
 func (s *State) IsErrorWith(ch rune) bool {
@@ -232,14 +235,8 @@ func render(s State, now time.Time) {
 	stats := fmt.Sprintf("%3d errors  %4.1f s  %5.2f cps  %3d wpm", s.CurrentRound().Errors, seconds, cps, int(wpm))
 	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
 
-	var color termbox.Attribute
-	if s.HighlightError(now) {
-		color = termbox.ColorYellow | termbox.AttrBold
-	} else {
-		color = termbox.ColorDefault
-	}
 	errors := fmt.Sprintf("%3d errors", s.CurrentRound().Errors)
-	tbPrint((w/2)-(len(stats)/2), h/2+4, color, termbox.ColorDefault, errors)
+	tbPrint((w/2)-(len(stats)/2), h/2+4, s.ErrorCountColor(now), termbox.ColorDefault, errors)
 
 	tbPrint(1, h-3, termbox.ColorDefault, termbox.ColorDefault,
 		"What's this fast, slow, medium thing?!")
@@ -337,35 +334,37 @@ func must(errArg int) func(...interface{}) {
 }
 
 func logStatistics(state *State, ev termbox.Event, now time.Time) {
-	if ev.Key == termbox.KeyEnter && state.Input == state.Text {
-		seconds, cps, wpm := computeStats(
-			state.Text, state.CurrentRound().StartedAt, now)
-		stats := Statistics{
-			Text:       state.Text,
-			StartedAt:  state.CurrentRound().StartedAt,
-			FinishedAt: now,
-			Errors:     state.CurrentRound().Errors,
-			Mode:       state.Mode,
-			Seconds:    seconds,
-			CPS:        cps,
-			WPM:        wpm,
-		}
-
-		f, err := os.OpenFile(os.Getenv("HOME")+"/.gotype.stats",
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-
-		data, err := json.Marshal(stats)
-		if err != nil {
-			panic(err)
-		}
-
-		must(1)(f.Write(data))
-		must(1)(f.Write([]byte("\n")))
+	if ev.Key != termbox.KeyEnter || state.Input != state.Text {
+		return
 	}
+
+	seconds, cps, wpm := computeStats(
+		state.Text, state.CurrentRound().StartedAt, now)
+	stats := Statistics{
+		Text:       state.Text,
+		StartedAt:  state.CurrentRound().StartedAt,
+		FinishedAt: now,
+		Errors:     state.CurrentRound().Errors,
+		Mode:       state.Mode,
+		Seconds:    seconds,
+		CPS:        cps,
+		WPM:        wpm,
+	}
+
+	f, err := os.OpenFile(os.Getenv("HOME")+"/.gotype.stats",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	data, err := json.Marshal(stats)
+	if err != nil {
+		panic(err)
+	}
+
+	must(1)(f.Write(data))
+	must(1)(f.Write([]byte("\n")))
 }
 
 func main() {

@@ -69,6 +69,7 @@ type State struct {
 	Words    []string
 	Timeouts map[time.Time]bool
 	Phrase   Phrase
+	Repeat   bool
 	Exiting  bool
 }
 
@@ -242,6 +243,11 @@ func render(s State, now time.Time) {
 		tbPrints((w/2)-(len(s.Phrase.Text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.Phrase.Input[byteOffset:])
 	}
 
+	if s.Repeat {
+		rep := "Repeating phrase"
+		tbPrint(w-len(rep)-1, 1, termbox.ColorDefault, termbox.ColorDefault, rep)
+	}
+
 	mode := fmt.Sprintf("In %s mode", s.Phrase.Mode.Name())
 	tbPrint((w/2)-(len(mode)/2), h/2-4, s.Phrase.Mode.Attr(), termbox.ColorDefault, mode)
 	modeDesc := fmt.Sprintf("(%s!)", s.Phrase.Mode.Desc())
@@ -280,14 +286,20 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	case termbox.KeyCtrlF:
 		s.Seed = nextSeed(s.Seed)
 		s.Phrase = *NewPhrase(generateText(s.Seed, s.Words))
+	case termbox.KeyCtrlR:
+		s.Repeat = !s.Repeat
 	case termbox.KeyEnter:
 		if s.Phrase.Input == s.Phrase.Text {
 			if s.Phrase.Mode != ModeNormal {
 				s.Phrase.Mode++
 				s.Phrase.Input = ""
 			} else {
-				s.Seed = nextSeed(s.Seed)
-				s.Phrase = *NewPhrase(generateText(s.Seed, s.Words))
+				if s.Repeat {
+					s.Phrase = *NewPhrase(s.Phrase.Text)
+				} else {
+					s.Seed = nextSeed(s.Seed)
+					s.Phrase = *NewPhrase(generateText(s.Seed, s.Words))
+				}
 			}
 		}
 	default:

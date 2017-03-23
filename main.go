@@ -65,6 +65,7 @@ type State struct {
 	Input    string
 	Rounds   [3]Round
 	Mode     Mode
+	Exiting  bool
 }
 
 type Statistics struct {
@@ -259,6 +260,8 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	}
 
 	switch ev.Key {
+	case termbox.KeyEsc, termbox.KeyCtrlC:
+		s.Exiting = true
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
 		if len(s.Input) > 0 {
 			_, l := utf8.DecodeLastRuneInString(s.Input)
@@ -398,15 +401,12 @@ func main() {
 	timers := make(map[time.Time]bool)
 
 	render(state, time.Now())
-	for {
+	for !state.Exiting {
 		ev := termbox.PollEvent()
 		now := time.Now()
 
 		switch ev.Type {
 		case termbox.EventKey:
-			if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
-				return
-			}
 			logStatistics(&state, ev, now)
 			state = reduce(state, ev, now)
 		case termbox.EventError:

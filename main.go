@@ -58,7 +58,7 @@ type Round struct {
 }
 
 type State struct {
-	Rand     *rand.Rand
+	Seed     int64
 	Words    []string
 	Timeouts map[time.Time]bool
 	Text     string
@@ -78,12 +78,12 @@ type Statistics struct {
 	WPM        float64   `json:"wpm"`
 }
 
-func NewState(rand *rand.Rand, words []string) *State {
+func NewState(seed int64, words []string) *State {
 	return &State{
 		Timeouts: make(map[time.Time]bool),
-		Rand:     rand,
+		Seed:     seed,
 		Words:    words,
-		Text:     generateText(rand, words),
+		Text:     generateText(seed, words),
 	}
 }
 
@@ -114,7 +114,12 @@ func min(a, b int) int {
 	return b
 }
 
-func generateText(rand *rand.Rand, words []string) string {
+func nextSeed(seed int64) int64 {
+	return rand.New(rand.NewSource(seed)).Int63()
+}
+
+func generateText(seed int64, words []string) string {
+	rand := rand.New(rand.NewSource(seed))
 	var w []string
 	l := int(rand.Int31n(4) + 4)
 	for len(w) < l {
@@ -259,13 +264,21 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 			_, l := utf8.DecodeLastRuneInString(s.Input)
 			s.Input = s.Input[:len(s.Input)-l]
 		}
+	case termbox.KeyCtrlF:
+		return *NewState(nextSeed(s.Seed), s.Words)
 	case termbox.KeyEnter:
 		if s.Input == s.Text {
 			if s.Mode != ModeNormal {
 				s.Mode++
 				s.Input = ""
 			} else {
-				return *NewState(s.Rand, s.Words)
+				var seed int64
+				if ev.Mod&termbox.ModAlt == 0 {
+					seed = nextSeed(s.Seed)
+				} else {
+					seed = s.Seed
+				}
+				return *NewState(seed, s.Words)
 			}
 		}
 	default:
@@ -381,7 +394,7 @@ func main() {
 		}
 	}()
 
-	state := *NewState(rand.New(rand.NewSource(time.Now().UnixNano())), getWords("/usr/share/dict/words"))
+	state := *NewState(time.Now().UnixNano(), getWords("/usr/share/dict/words"))
 	timers := make(map[time.Time]bool)
 
 	render(state, time.Now())

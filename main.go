@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"math/rand"
@@ -402,6 +403,10 @@ func logStatistics(phrase *Phrase, ev termbox.Event, now time.Time) {
 }
 
 func main() {
+	var wordFile = flag.String(
+		"w", "/usr/share/dict/words", "path to word list")
+	flag.Parse()
+
 	err := termbox.Init()
 	if err != nil {
 		panic(err)
@@ -415,7 +420,7 @@ func main() {
 		}
 	}()
 
-	state := *NewState(time.Now().UnixNano(), getWords("/usr/share/dict/words"))
+	state := *NewState(time.Now().UnixNano(), getWords(*wordFile))
 	timers := make(map[time.Time]bool)
 
 	render(state, time.Now())

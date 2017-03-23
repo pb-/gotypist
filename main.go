@@ -57,14 +57,18 @@ type Round struct {
 	Errors    int
 }
 
+type Phrase struct {
+	Text   string
+	Input  string
+	Rounds [3]Round
+	Mode   Mode
+}
+
 type State struct {
 	Seed     int64
 	Words    []string
 	Timeouts map[time.Time]bool
-	Text     string
-	Input    string
-	Rounds   [3]Round
-	Mode     Mode
+	Phrase   Phrase
 	Exiting  bool
 }
 
@@ -79,33 +83,39 @@ type Statistics struct {
 	WPM        float64   `json:"wpm"`
 }
 
+func NewPhrase(text string) *Phrase {
+	return &Phrase{
+		Text: text,
+	}
+}
+
 func NewState(seed int64, words []string) *State {
 	return &State{
 		Timeouts: make(map[time.Time]bool),
 		Seed:     seed,
 		Words:    words,
-		Text:     generateText(seed, words),
+		Phrase:   *NewPhrase(generateText(seed, words)),
 	}
 }
 
-func (s *State) CurrentRound() *Round {
-	return &s.Rounds[s.Mode]
+func (p *Phrase) CurrentRound() *Round {
+	return &p.Rounds[p.Mode]
 }
 
-func (s *State) ShowFail(t time.Time) bool {
-	return s.Mode == ModeSlow && t.Sub(s.CurrentRound().FailedAt) < FailPenaltyDuration
+func (p *Phrase) ShowFail(t time.Time) bool {
+	return p.Mode == ModeSlow && t.Sub(p.CurrentRound().FailedAt) < FailPenaltyDuration
 }
 
-func (s *State) ErrorCountColor(t time.Time) termbox.Attribute {
-	if s.Mode == ModeFast && t.Sub(s.CurrentRound().FailedAt) < FastErrorHighlightDuration {
+func (p *Phrase) ErrorCountColor(t time.Time) termbox.Attribute {
+	if p.Mode == ModeFast && t.Sub(p.CurrentRound().FailedAt) < FastErrorHighlightDuration {
 		return termbox.ColorYellow | termbox.AttrBold
 	}
 	return termbox.ColorDefault
 }
 
-func (s *State) IsErrorWith(ch rune) bool {
-	input := s.Input + string(ch)
-	return len(input) > len(s.Text) || input != s.Text[:len(input)]
+func (p *Phrase) IsErrorWith(ch rune) bool {
+	input := p.Input + string(ch)
+	return len(input) > len(p.Text) || input != p.Text[:len(input)]
 }
 
 func min(a, b int) int {
@@ -219,30 +229,30 @@ func render(s State, now time.Time) {
 
 	w, h := termbox.Size()
 
-	byteOffset, runeOffset := errorOffset(s.Text, s.Input)
+	byteOffset, runeOffset := errorOffset(s.Phrase.Text, s.Phrase.Input)
 
-	if s.ShowFail(now) {
-		left := min(int(s.CurrentRound().FailedAt.Add(FailPenaltyDuration).Sub(now).Seconds()+1), FailPenaltySeconds)
+	if s.Phrase.ShowFail(now) {
+		left := min(int(s.Phrase.CurrentRound().FailedAt.Add(FailPenaltyDuration).Sub(now).Seconds()+1), FailPenaltySeconds)
 		msg := fmt.Sprintf("FAIL! Let's do this again in %d...", left)
 		tbPrint((w/2)-(len(msg)/2), h/2, termbox.ColorRed|termbox.AttrBold, termbox.ColorDefault, msg)
 	} else {
-		tbPrint((w/2)-(len(s.Text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.Text+string('⏎'))
+		tbPrint((w/2)-(len(s.Phrase.Text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.Phrase.Text+string('⏎'))
 
-		tbPrints((w/2)-(len(s.Text)/2), h/2, termbox.ColorGreen, termbox.ColorDefault, s.Input[:byteOffset])
-		tbPrints((w/2)-(len(s.Text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.Input[byteOffset:])
+		tbPrints((w/2)-(len(s.Phrase.Text)/2), h/2, termbox.ColorGreen, termbox.ColorDefault, s.Phrase.Input[:byteOffset])
+		tbPrints((w/2)-(len(s.Phrase.Text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.Phrase.Input[byteOffset:])
 	}
 
-	mode := fmt.Sprintf("In %s mode", s.Mode.Name())
-	tbPrint((w/2)-(len(mode)/2), h/2-4, s.Mode.Attr(), termbox.ColorDefault, mode)
-	modeDesc := fmt.Sprintf("(%s!)", s.Mode.Desc())
+	mode := fmt.Sprintf("In %s mode", s.Phrase.Mode.Name())
+	tbPrint((w/2)-(len(mode)/2), h/2-4, s.Phrase.Mode.Attr(), termbox.ColorDefault, mode)
+	modeDesc := fmt.Sprintf("(%s!)", s.Phrase.Mode.Desc())
 	tbPrint((w/2)-(len(modeDesc)/2), h/2-3, termbox.ColorDefault, termbox.ColorDefault, modeDesc)
 
-	seconds, cps, wpm := computeStats(s.Input[:byteOffset], s.CurrentRound().StartedAt, now)
-	stats := fmt.Sprintf("%3d errors  %4.1f s  %5.2f cps  %3d wpm", s.CurrentRound().Errors, seconds, cps, int(wpm))
+	seconds, cps, wpm := computeStats(s.Phrase.Input[:byteOffset], s.Phrase.CurrentRound().StartedAt, now)
+	stats := fmt.Sprintf("%3d errors  %4.1f s  %5.2f cps  %3d wpm", s.Phrase.CurrentRound().Errors, seconds, cps, int(wpm))
 	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
 
-	errors := fmt.Sprintf("%3d errors", s.CurrentRound().Errors)
-	tbPrint((w/2)-(len(stats)/2), h/2+4, s.ErrorCountColor(now), termbox.ColorDefault, errors)
+	errors := fmt.Sprintf("%3d errors", s.Phrase.CurrentRound().Errors)
+	tbPrint((w/2)-(len(stats)/2), h/2+4, s.Phrase.ErrorCountColor(now), termbox.ColorDefault, errors)
 
 	tbPrint(1, h-3, termbox.ColorDefault, termbox.ColorDefault,
 		"What's this fast, slow, medium thing?!")
@@ -251,37 +261,33 @@ func render(s State, now time.Time) {
 }
 
 func reduce(s State, ev termbox.Event, now time.Time) State {
-	if s.ShowFail(now) {
+	if s.Phrase.ShowFail(now) {
 		return s
 	}
 
-	if s.CurrentRound().StartedAt.IsZero() {
-		s.CurrentRound().StartedAt = now
+	if s.Phrase.CurrentRound().StartedAt.IsZero() {
+		s.Phrase.CurrentRound().StartedAt = now
 	}
 
 	switch ev.Key {
 	case termbox.KeyEsc, termbox.KeyCtrlC:
 		s.Exiting = true
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
-		if len(s.Input) > 0 {
-			_, l := utf8.DecodeLastRuneInString(s.Input)
-			s.Input = s.Input[:len(s.Input)-l]
+		if len(s.Phrase.Input) > 0 {
+			_, l := utf8.DecodeLastRuneInString(s.Phrase.Input)
+			s.Phrase.Input = s.Phrase.Input[:len(s.Phrase.Input)-l]
 		}
 	case termbox.KeyCtrlF:
-		return *NewState(nextSeed(s.Seed), s.Words)
+		s.Seed = nextSeed(s.Seed)
+		s.Phrase = *NewPhrase(generateText(s.Seed, s.Words))
 	case termbox.KeyEnter:
-		if s.Input == s.Text {
-			if s.Mode != ModeNormal {
-				s.Mode++
-				s.Input = ""
+		if s.Phrase.Input == s.Phrase.Text {
+			if s.Phrase.Mode != ModeNormal {
+				s.Phrase.Mode++
+				s.Phrase.Input = ""
 			} else {
-				var seed int64
-				if ev.Mod&termbox.ModAlt == 0 {
-					seed = nextSeed(s.Seed)
-				} else {
-					seed = s.Seed
-				}
-				return *NewState(seed, s.Words)
+				s.Seed = nextSeed(s.Seed)
+				s.Phrase = *NewPhrase(generateText(s.Seed, s.Words))
 			}
 		}
 	default:
@@ -293,21 +299,21 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		}
 
 		if ch != 0 {
-			if s.IsErrorWith(ch) {
-				s.CurrentRound().Errors++
-				s.CurrentRound().FailedAt = now
-				if s.Mode == ModeSlow {
-					s.Input = ""
+			if s.Phrase.IsErrorWith(ch) {
+				s.Phrase.CurrentRound().Errors++
+				s.Phrase.CurrentRound().FailedAt = now
+				if s.Phrase.Mode == ModeSlow {
+					s.Phrase.Input = ""
 					for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
 						s.Timeouts[now.Add(time.Second*t)] = true
 					}
-				} else if s.Mode == ModeNormal {
-					s.Input += string(ch)
-				} else if s.Mode == ModeFast {
+				} else if s.Phrase.Mode == ModeNormal {
+					s.Phrase.Input += string(ch)
+				} else if s.Phrase.Mode == ModeFast {
 					s.Timeouts[now.Add(FastErrorHighlightDuration)] = true
 				}
 			} else {
-				s.Input += string(ch)
+				s.Phrase.Input += string(ch)
 			}
 		}
 
@@ -349,19 +355,19 @@ func must(errArg int) func(...interface{}) {
 	}
 }
 
-func logStatistics(state *State, ev termbox.Event, now time.Time) {
-	if ev.Key != termbox.KeyEnter || state.Input != state.Text {
+func logStatistics(phrase *Phrase, ev termbox.Event, now time.Time) {
+	if ev.Key != termbox.KeyEnter || phrase.Input != phrase.Text {
 		return
 	}
 
 	seconds, cps, wpm := computeStats(
-		state.Text, state.CurrentRound().StartedAt, now)
+		phrase.Text, phrase.CurrentRound().StartedAt, now)
 	stats := Statistics{
-		Text:       state.Text,
-		StartedAt:  state.CurrentRound().StartedAt,
+		Text:       phrase.Text,
+		StartedAt:  phrase.CurrentRound().StartedAt,
 		FinishedAt: now,
-		Errors:     state.CurrentRound().Errors,
-		Mode:       state.Mode,
+		Errors:     phrase.CurrentRound().Errors,
+		Mode:       phrase.Mode,
 		Seconds:    seconds,
 		CPS:        cps,
 		WPM:        wpm,
@@ -407,7 +413,7 @@ func main() {
 
 		switch ev.Type {
 		case termbox.EventKey:
-			logStatistics(&state, ev, now)
+			logStatistics(&state.Phrase, ev, now)
 			state = reduce(state, ev, now)
 		case termbox.EventError:
 			panic(ev.Err)

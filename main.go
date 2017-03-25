@@ -7,25 +7,6 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-func manageTimers(timers, timeouts map[time.Time]bool, now time.Time, interruptFunc func()) map[time.Time]bool {
-	// remove old timers
-	for t := range timers {
-		if _, ok := timeouts[t]; !ok {
-			delete(timers, t)
-		}
-	}
-
-	// set up new timers
-	for t := range timeouts {
-		if _, ok := timers[t]; !ok {
-			timers[t] = true
-			time.AfterFunc(t.Sub(now), interruptFunc)
-		}
-	}
-
-	return timers
-}
-
 func main() {
 	var wordFile = flag.String(
 		"w", "/usr/share/dict/words", "path to word list")
@@ -65,4 +46,23 @@ func main() {
 		timers = manageTimers(timers, state.Timeouts, now, termbox.Interrupt)
 	}
 
+}
+
+func manageTimers(timers, timeouts map[time.Time]bool, now time.Time, interruptFunc func()) map[time.Time]bool {
+	// remove old timers
+	for t := range timers {
+		if _, ok := timeouts[t]; !ok {
+			delete(timers, t)
+		}
+	}
+
+	// set up new timers
+	for t := range timeouts {
+		if _, ok := timers[t]; !ok {
+			timers[t] = true
+			time.AfterFunc(t.Sub(now), interruptFunc)
+		}
+	}
+
+	return timers
 }

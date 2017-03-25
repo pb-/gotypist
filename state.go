@@ -120,7 +120,7 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		s = resetPhrase(s, true)
 	case termbox.KeyCtrlR:
 		s.Repeat = !s.Repeat
-	case termbox.KeyEnter:
+	case termbox.KeyEnter, termbox.KeyCtrlJ:
 		if s.Phrase.Input == s.Phrase.Text {
 			if s.Phrase.Mode != ModeNormal {
 				s.Phrase.Mode++

@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -22,12 +23,13 @@ type Phrase struct {
 }
 
 type State struct {
-	Seed     int64
-	Words    []string
-	Timeouts map[time.Time]bool
-	Phrase   Phrase
-	Repeat   bool
-	Exiting  bool
+	Seed         int64
+	Words        []string
+	StaticPhrase bool
+	Timeouts     map[time.Time]bool
+	Phrase       Phrase
+	Repeat       bool
+	Exiting      bool
 }
 
 func NewPhrase(text string) *Phrase {
@@ -36,13 +38,15 @@ func NewPhrase(text string) *Phrase {
 	}
 }
 
-func NewState(seed int64, words []string) *State {
-	return &State{
-		Timeouts: make(map[time.Time]bool),
-		Seed:     seed,
-		Words:    words,
-		Phrase:   *NewPhrase(generateText(seed, words)),
-	}
+func NewState(seed int64, words []string, staticPhrase bool) *State {
+	s := resetPhrase(State{
+		Timeouts:     make(map[time.Time]bool),
+		Seed:         seed,
+		Words:        words,
+		StaticPhrase: staticPhrase,
+	}, false)
+
+	return &s
 }
 
 func (p *Phrase) CurrentRound() *Round {
@@ -63,6 +67,18 @@ func (p *Phrase) ErrorCountColor(t time.Time) termbox.Attribute {
 func (p *Phrase) IsErrorWith(ch rune) bool {
 	input := p.Input + string(ch)
 	return len(input) > len(p.Text) || input != p.Text[:len(input)]
+}
+
+func resetPhrase(state State, forceNext bool) State {
+	if state.StaticPhrase {
+		state.Phrase = *NewPhrase(strings.Join(state.Words, " "))
+	} else {
+		if !state.Repeat || forceNext {
+			state.Seed = nextSeed(state.Seed)
+		}
+		state.Phrase = *NewPhrase(generateText(state.Seed, state.Words))
+	}
+	return state
 }
 
 func errorOffset(text string, input string) (int, int) {
@@ -101,8 +117,7 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 			s.Phrase.Input = s.Phrase.Input[:len(s.Phrase.Input)-l]
 		}
 	case termbox.KeyCtrlF:
-		s.Seed = nextSeed(s.Seed)
-		s.Phrase = *NewPhrase(generateText(s.Seed, s.Words))
+		s = resetPhrase(s, true)
 	case termbox.KeyCtrlR:
 		s.Repeat = !s.Repeat
 	case termbox.KeyEnter:
@@ -111,12 +126,7 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 				s.Phrase.Mode++
 				s.Phrase.Input = ""
 			} else {
-				if s.Repeat {
-					s.Phrase = *NewPhrase(s.Phrase.Text)
-				} else {
-					s.Seed = nextSeed(s.Seed)
-					s.Phrase = *NewPhrase(generateText(s.Seed, s.Words))
-				}
+				s = resetPhrase(s, false)
 			}
 		}
 	default:

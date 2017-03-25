@@ -12,5 +12,4 @@ This project is mainly motivated by trying out [termbox-go](https://github.com/n
 
 ## TODO
 
- * Accept a phrase on the command line
  * Record typing errors in terms of (expected-character,actual-character) pairs

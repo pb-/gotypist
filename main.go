@@ -25,7 +25,13 @@ func main() {
 		}
 	}()
 
-	state := *NewState(time.Now().UnixNano(), getWords(*wordFile))
+	var words []string
+	if len(flag.Args()) > 0 {
+		words = flag.Args()
+	} else {
+		words = getWords(*wordFile)
+	}
+	state := *NewState(time.Now().UnixNano(), words, len(flag.Args()) != 0)
 	timers := make(map[time.Time]bool)
 
 	render(state, time.Now())

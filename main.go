@@ -41,7 +41,7 @@ func main() {
 
 		switch ev.Type {
 		case termbox.EventKey:
-			logStatistics(&state.Phrase, ev, now)
+			logStats(&state.Phrase, ev.Key, now)
 			state = reduce(state, ev, now)
 		case termbox.EventError:
 			panic(ev.Err)

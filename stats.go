@@ -36,11 +36,19 @@ func computeStats(text string, start, end time.Time) (seconds, cps, wpm float64)
 	return seconds, cps, wpm
 }
 
-func logStatistics(phrase *Phrase, ev termbox.Event, now time.Time) {
-	if ev.Key != termbox.KeyEnter || phrase.Input != phrase.Text {
-		return
+func writeStats(data []byte) {
+	f, err := os.OpenFile(os.Getenv("HOME")+"/.gotypist.stats",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
 	}
+	defer f.Close()
 
+	must(1)(f.Write(data))
+	must(1)(f.Write([]byte("\n")))
+}
+
+func formatStats(phrase *Phrase, now time.Time) []byte {
 	typos := phrase.CurrentRound().Typos
 	if typos == nil {
 		typos = make([]Typo, 0)
@@ -60,18 +68,18 @@ func logStatistics(phrase *Phrase, ev termbox.Event, now time.Time) {
 		WPM:        wpm,
 	}
 
-	f, err := os.OpenFile(os.Getenv("HOME")+"/.gotype.stats",
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
 	data, err := json.Marshal(stats)
 	if err != nil {
 		panic(err)
 	}
 
-	must(1)(f.Write(data))
-	must(1)(f.Write([]byte("\n")))
+	return data
+}
+
+func logStats(phrase *Phrase, key termbox.Key, now time.Time) {
+	if key != termbox.KeyEnter || phrase.Input != phrase.Text {
+		return
+	}
+
+	writeStats(formatStats(phrase, now))
 }

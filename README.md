@@ -9,7 +9,3 @@ This project is mainly motivated by trying out [termbox-go](https://github.com/n
     ESC   quit
     C-F   skip forward to the next phrase
     C-R   toggle repeat phrase mode
-
-## TODO
-
- * Record typing errors in terms of (expected-character,actual-character) pairs

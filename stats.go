@@ -15,6 +15,7 @@ type Statistics struct {
 	StartedAt  time.Time `json:"started_at"`
 	FinishedAt time.Time `json:"finished_at"`
 	Errors     int       `json:"errors"`
+	Typos      []Typo    `json:"typos"`
 	Mode       Mode      `json:"mode"`
 	Seconds    float64   `json:"seconds"`
 	CPS        float64   `json:"cps"`
@@ -40,6 +41,11 @@ func logStatistics(phrase *Phrase, ev termbox.Event, now time.Time) {
 		return
 	}
 
+	typos := phrase.CurrentRound().Typos
+	if typos == nil {
+		typos = make([]Typo, 0)
+	}
+
 	seconds, cps, wpm := computeStats(
 		phrase.Text, phrase.CurrentRound().StartedAt, now)
 	stats := Statistics{
@@ -47,6 +53,7 @@ func logStatistics(phrase *Phrase, ev termbox.Event, now time.Time) {
 		StartedAt:  phrase.CurrentRound().StartedAt,
 		FinishedAt: now,
 		Errors:     phrase.CurrentRound().Errors,
+		Typos:      typos,
 		Mode:       phrase.Mode,
 		Seconds:    seconds,
 		CPS:        cps,

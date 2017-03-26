@@ -9,10 +9,16 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+type Typo struct {
+	Expected string `json:"expected"`
+	Actual   string `json:"actual"`
+}
+
 type Round struct {
 	StartedAt time.Time
 	FailedAt  time.Time
 	Errors    int
+	Typos     []Typo
 }
 
 type Phrase struct {
@@ -64,9 +70,13 @@ func (p *Phrase) ErrorCountColor(t time.Time) termbox.Attribute {
 	return termbox.ColorDefault
 }
 
-func (p *Phrase) IsErrorWith(ch rune) bool {
-	input := p.Input + string(ch)
-	return len(input) > len(p.Text) || input != p.Text[:len(input)]
+func (p *Phrase) expected() rune {
+	if len(p.Input) >= len(p.Text) {
+		return 0
+	}
+
+	expected, _ := utf8.DecodeRuneInString(p.Text[len(p.Input):])
+	return expected
 }
 
 func resetPhrase(state State, forceNext bool) State {
@@ -138,7 +148,15 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		}
 
 		if ch != 0 {
-			if s.Phrase.IsErrorWith(ch) {
+			exp := s.Phrase.expected()
+			if ch != exp {
+				if exp != 0 {
+					s.Phrase.CurrentRound().Typos = append(
+						s.Phrase.CurrentRound().Typos, Typo{
+							Expected: string(exp),
+							Actual:   string(ch),
+						})
+				}
 				s.Phrase.CurrentRound().Errors++
 				s.Phrase.CurrentRound().FailedAt = now
 				if s.Phrase.Mode == ModeSlow {

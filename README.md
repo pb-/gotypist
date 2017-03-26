@@ -4,6 +4,13 @@ A simple touch-typing tutor that follows [Steve Yegge's methodology](http://stev
 
 This project is mainly motivated by trying out [termbox-go](https://github.com/nsf/termbox-go), but it is definitely ready for productive learning.
 
+## Usage
+
+    gotypist [-w FILE] [WORD]...
+
+    -w FILE     Use this file as word list instead of /usr/share/dict/words
+    WORD...     Explicitly specify a phrase
+
 ## Key bindings
 
     ESC   quit

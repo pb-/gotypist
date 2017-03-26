@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"time"
 
 	"github.com/nsf/termbox-go"
@@ -16,7 +17,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer termbox.Close()
 	termbox.SetInputMode(termbox.InputEsc)
 
 	go func() {
@@ -52,6 +52,11 @@ func main() {
 		timers = manageTimers(timers, state.Timeouts, now, termbox.Interrupt)
 	}
 
+	termbox.Close()
+
+	if state.RageQuit {
+		fmt.Println("Ragequitting, eh?")
+	}
 }
 
 func manageTimers(timers, timeouts map[time.Time]bool, now time.Time, interruptFunc func()) map[time.Time]bool {

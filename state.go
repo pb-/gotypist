@@ -36,6 +36,7 @@ type State struct {
 	Phrase       Phrase
 	Repeat       bool
 	Exiting      bool
+	RageQuit     bool
 }
 
 func NewPhrase(text string) *Phrase {
@@ -110,6 +111,12 @@ func errorOffset(text string, input string) (int, int) {
 }
 
 func reduce(s State, ev termbox.Event, now time.Time) State {
+	if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
+		s.Exiting = true
+		if s.Phrase.ShowFail(now) {
+			s.RageQuit = true
+		}
+	}
 	if s.Phrase.ShowFail(now) {
 		return s
 	}
@@ -119,8 +126,6 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	}
 
 	switch ev.Key {
-	case termbox.KeyEsc, termbox.KeyCtrlC:
-		s.Exiting = true
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
 		if len(s.Phrase.Input) > 0 {
 			_, l := utf8.DecodeLastRuneInString(s.Phrase.Input)

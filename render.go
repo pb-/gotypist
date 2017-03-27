@@ -21,7 +21,7 @@ func render(s State, now time.Time) {
 
 	if s.Phrase.ShowFail(now) {
 		left := min(int(s.Phrase.CurrentRound().FailedAt.Add(FailPenaltyDuration).Sub(now).Seconds()+1), FailPenaltySeconds)
-		msg := fmt.Sprintf("FAIL! Let's do this again in %d...", left)
+		msg := fmt.Sprintf(failMessage(s.Phrase.CurrentRound().Errors), left)
 		tbPrint((w/2)-(len(msg)/2), h/2, termbox.ColorRed|termbox.AttrBold, termbox.ColorDefault, msg)
 	} else {
 		tbPrint((w/2)-(len(s.Phrase.Text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.Phrase.Text+string('⏎'))
@@ -51,6 +51,21 @@ func render(s State, now time.Time) {
 		"What's this fast, slow, medium thing?!")
 	tbPrint(1, h-2, termbox.ColorDefault, termbox.ColorDefault,
 		"http://steve-yegge.blogspot.com/2008/09/programmings-dirtiest-little-secret.html")
+}
+
+func failMessage(errs int) string {
+	switch errs {
+	case 1:
+		return "Not quite! Please try again in %d..."
+	case 2, 3:
+		return "FAIL! Let's do this again in %d..."
+	case 4, 5:
+		return "Dude?! Try again in %d..."
+	case 6, 7, 8:
+		return "Are you serious?!? Again in %d..."
+	default:
+		return "I don't even... %d..."
+	}
 }
 
 func tbPrint(x, y int, fg, bg termbox.Attribute, msg string) {

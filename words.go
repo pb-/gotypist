@@ -10,14 +10,16 @@ import (
 	"strings"
 )
 
-func generateText(seed int64, words []string) string {
+func generateText(seed int64, pool []string) string {
 	rand := rand.New(rand.NewSource(seed))
-	var w []string
-	l := int(rand.Int31n(4) + 4)
-	for len(w) < l {
-		w = append(w, words[rand.Int31n(int32(len(words)))])
+	var words []string
+	l := -1
+	for l < 30 {
+		w := pool[rand.Int31n(int32(len(pool)))]
+		words = append(words, w)
+		l += len(w) + 1
 	}
-	return strings.Join(w, " ")
+	return strings.Join(words, " ")
 }
 
 func readWords(path string) ([]string, error) {

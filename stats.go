@@ -37,8 +37,11 @@ func computeStats(text string, start, end time.Time) (seconds, cps, wpm float64)
 }
 
 func writeStats(data []byte) {
-	f, err := os.OpenFile(os.Getenv("HOME")+"/.gotypist.stats",
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	filename := os.Getenv("HOME") + "/.gotypist.stats"
+	if name := os.Getenv("STATSFILE"); name != "" {
+		filename = name
+	}
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		panic(err)
 	}

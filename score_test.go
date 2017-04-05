@@ -27,3 +27,7 @@ func TestScore(t *testing.T) {
 	assert.InEpsilon(t, 0.2*100./1.1+0.8*50, score(
 		"helloworld", time.Duration(time.Millisecond*100), 1), epsilon)
 }
+
+func TestLevel(t *testing.T) {
+	assert.Equal(t, 42, level(requiredScore(42)))
+}

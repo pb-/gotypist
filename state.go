@@ -41,77 +41,6 @@ type State struct {
 	Score        float64
 }
 
-func NewPhrase(text string) *Phrase {
-	return &Phrase{
-		Text: text,
-	}
-}
-
-func NewState(seed int64, words []string, staticPhrase bool) *State {
-	s := resetPhrase(State{
-		Timeouts:     make(map[time.Time]bool),
-		Seed:         seed,
-		Words:        words,
-		StaticPhrase: staticPhrase,
-	}, false)
-
-	return &s
-}
-
-func (p *Phrase) CurrentRound() *Round {
-	return &p.Rounds[p.Mode]
-}
-
-func (p *Phrase) ShowFail(t time.Time) bool {
-	return p.Mode == ModeSlow && t.Sub(p.CurrentRound().FailedAt) < FailPenaltyDuration
-}
-
-func (p *Phrase) ErrorCountColor(t time.Time) termbox.Attribute {
-	if p.Mode == ModeFast && t.Sub(p.CurrentRound().FailedAt) < FastErrorHighlightDuration {
-		return termbox.ColorYellow | termbox.AttrBold
-	}
-	return termbox.ColorDefault
-}
-
-func (p *Phrase) expected() rune {
-	if len(p.Input) >= len(p.Text) {
-		return 0
-	}
-
-	expected, _ := utf8.DecodeRuneInString(p.Text[len(p.Input):])
-	return expected
-}
-
-func resetPhrase(state State, forceNext bool) State {
-	if state.StaticPhrase {
-		state.Phrase = *NewPhrase(strings.Join(state.Words, " "))
-	} else {
-		if !state.Repeat || forceNext {
-			state.Seed = nextSeed(state.Seed)
-		}
-		state.Phrase = *NewPhrase(generateText(state.Seed, state.Words))
-	}
-	return state
-}
-
-func errorOffset(text string, input string) (int, int) {
-	runeOffset := 0
-	for i, tr := range text {
-		if i >= len(input) {
-			return len(input), runeOffset
-		}
-
-		ir, _ := utf8.DecodeRuneInString(input[i:])
-		if ir != tr {
-			return i, runeOffset
-		}
-
-		runeOffset++
-	}
-
-	return min(len(input), len(text)), runeOffset
-}
-
 func reduce(s State, ev termbox.Event, now time.Time) State {
 	if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 		s.Exiting = true
@@ -194,6 +123,36 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	return s
 }
 
+func resetPhrase(state State, forceNext bool) State {
+	if state.StaticPhrase {
+		state.Phrase = *NewPhrase(strings.Join(state.Words, " "))
+	} else {
+		if !state.Repeat || forceNext {
+			state.Seed = nextSeed(state.Seed)
+		}
+		state.Phrase = *NewPhrase(generateText(state.Seed, state.Words))
+	}
+	return state
+}
+
+func errorOffset(text string, input string) (int, int) {
+	runeOffset := 0
+	for i, tr := range text {
+		if i >= len(input) {
+			return len(input), runeOffset
+		}
+
+		ir, _ := utf8.DecodeRuneInString(input[i:])
+		if ir != tr {
+			return i, runeOffset
+		}
+
+		runeOffset++
+	}
+
+	return min(len(input), len(text)), runeOffset
+}
+
 func mustComputeScore(phrase Phrase) float64 {
 	var scores [3]float64
 	if len(scores) != len(phrase.Rounds) {
@@ -219,6 +178,47 @@ func mustComputeScore(phrase Phrase) float64 {
 		scores[ModeFast],
 		scores[ModeSlow],
 		scores[ModeNormal])
+}
+
+func NewState(seed int64, words []string, staticPhrase bool) *State {
+	s := resetPhrase(State{
+		Timeouts:     make(map[time.Time]bool),
+		Seed:         seed,
+		Words:        words,
+		StaticPhrase: staticPhrase,
+	}, false)
+
+	return &s
+}
+
+func NewPhrase(text string) *Phrase {
+	return &Phrase{
+		Text: text,
+	}
+}
+
+func (p *Phrase) CurrentRound() *Round {
+	return &p.Rounds[p.Mode]
+}
+
+func (p *Phrase) ShowFail(t time.Time) bool {
+	return p.Mode == ModeSlow && t.Sub(p.CurrentRound().FailedAt) < FailPenaltyDuration
+}
+
+func (p *Phrase) ErrorCountColor(t time.Time) termbox.Attribute {
+	if p.Mode == ModeFast && t.Sub(p.CurrentRound().FailedAt) < FastErrorHighlightDuration {
+		return termbox.ColorYellow | termbox.AttrBold
+	}
+	return termbox.ColorDefault
+}
+
+func (p *Phrase) expected() rune {
+	if len(p.Input) >= len(p.Text) {
+		return 0
+	}
+
+	expected, _ := utf8.DecodeRuneInString(p.Text[len(p.Input):])
+	return expected
 }
 
 func nextSeed(seed int64) int64 {

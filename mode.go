@@ -28,6 +28,10 @@ var modeInfo = []struct {
 	Attr: termbox.ColorYellow | termbox.AttrBold,
 }}
 
+func (m Mode) Num() int {
+	return int(m)
+}
+
 func (m Mode) Name() string {
 	return modeInfo[m].Name
 }

@@ -15,10 +15,11 @@ type Typo struct {
 }
 
 type Round struct {
-	StartedAt time.Time
-	FailedAt  time.Time
-	Errors    int
-	Typos     []Typo
+	StartedAt  time.Time
+	FailedAt   time.Time
+	FinishedAt time.Time
+	Errors     int
+	Typos      []Typo
 }
 
 type Phrase struct {
@@ -37,6 +38,7 @@ type State struct {
 	Repeat       bool
 	Exiting      bool
 	RageQuit     bool
+	Score        float64
 }
 
 func NewPhrase(text string) *Phrase {
@@ -137,10 +139,12 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		s.Repeat = !s.Repeat
 	case termbox.KeyEnter, termbox.KeyCtrlJ:
 		if s.Phrase.Input == s.Phrase.Text {
+			s.Phrase.CurrentRound().FinishedAt = now
 			if s.Phrase.Mode != ModeNormal {
 				s.Phrase.Mode++
 				s.Phrase.Input = ""
 			} else {
+				s.Score += mustComputeScore(s.Phrase)
 				s = resetPhrase(s, false)
 			}
 		}
@@ -188,6 +192,33 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	}
 
 	return s
+}
+
+func mustComputeScore(phrase Phrase) float64 {
+	var scores [3]float64
+	if len(scores) != len(phrase.Rounds) {
+		panic("bad score computation")
+	}
+
+	for mode, round := range phrase.Rounds {
+		var s float64
+		time := round.FinishedAt.Sub(round.StartedAt)
+		switch mode {
+		case ModeFast.Num():
+			s = speedScore(phrase.Text, time)
+		case ModeSlow.Num():
+			s = errorScore(phrase.Text, round.Errors)
+		case ModeNormal.Num():
+			s = score(phrase.Text, time, round.Errors)
+		}
+
+		scores[mode] = s
+	}
+
+	return weightedScore(
+		scores[ModeFast],
+		scores[ModeSlow],
+		scores[ModeNormal])
 }
 
 func nextSeed(seed int64) int64 {

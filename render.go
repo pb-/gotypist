@@ -35,6 +35,8 @@ func render(s State, now time.Time) {
 		tbPrint(w-len(rep)-1, 1, termbox.ColorDefault, termbox.ColorDefault, rep)
 	}
 
+	tbPrint(1, 1, termbox.ColorDefault, termbox.ColorDefault, fmt.Sprintf("Score: %.0f", s.Score))
+
 	mode := fmt.Sprintf("In %s mode", s.Phrase.Mode.Name())
 	tbPrint((w/2)-(len(mode)/2), h/2-4, s.Phrase.Mode.Attr(), termbox.ColorDefault, mode)
 	modeDesc := fmt.Sprintf("(%s!)", s.Phrase.Mode.Desc())

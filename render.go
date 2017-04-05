@@ -7,9 +7,11 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const FailPenaltySeconds = 3
-const FailPenaltyDuration = time.Second * FailPenaltySeconds
-const FastErrorHighlightDuration = time.Millisecond * 333
+const (
+	FailPenaltySeconds         = 3
+	FailPenaltyDuration        = time.Second * FailPenaltySeconds
+	FastErrorHighlightDuration = time.Millisecond * 333
+)
 
 func render(s State, now time.Time) {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)

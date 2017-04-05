@@ -7,9 +7,11 @@ import (
 	"unicode/utf8"
 )
 
-const speedErrorRatio = 0.2
-const scoreScalar = 100.
-const scoreExponent = 2.3
+const (
+	speedErrorRatio = 0.2
+	scoreScalar     = 100.
+	scoreExponent   = 2.3
+)
 
 func speedScore(text string, time time.Duration) float64 {
 	return 10 * float64(utf8.RuneCountInString(text)) / (1 + time.Seconds())

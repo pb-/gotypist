@@ -13,6 +13,7 @@ const (
 	FailPenaltySeconds         = 3
 	FailPenaltyDuration        = time.Second * FailPenaltySeconds
 	FastErrorHighlightDuration = time.Millisecond * 333
+	ScoreHighlightDuration     = time.Second * 3
 )
 
 const (
@@ -72,6 +73,10 @@ func render(s State, now time.Time) {
 		write(text("Repeating phrase").X(w - 1).Y(1).Align(Right))
 	}
 
+	if now.Before(s.LastScoreUntil) {
+		write(text("   Score: %.0f +%.0f", s.Score, s.LastScore).
+			X(1).Y(1).Fg(blue | bold))
+	}
 	write(text("   Score: %.0f", s.Score).X(1).Y(1))
 	write(text("   Level: %d", level(s.Score)).X(1).Y(2))
 	write(text("Progress: %.0f%%", 100*progress(s.Score)).X(1).Y(3))

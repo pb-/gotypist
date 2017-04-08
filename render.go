@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/nsf/termbox-go"
 )
@@ -13,6 +15,36 @@ const (
 	FastErrorHighlightDuration = time.Millisecond * 333
 )
 
+const (
+	black   = termbox.ColorBlack
+	red     = termbox.ColorRed
+	green   = termbox.ColorGreen
+	yellow  = termbox.ColorYellow
+	blue    = termbox.ColorBlue
+	magenta = termbox.ColorMagenta
+	cyan    = termbox.ColorCyan
+	white   = termbox.ColorWhite
+
+	bold = termbox.AttrBold
+)
+
+type Align int
+
+const (
+	Left Align = iota
+	Center
+	Right
+)
+
+type printSpec struct {
+	text  string
+	x     int
+	y     int
+	fg    termbox.Attribute
+	bg    termbox.Attribute
+	align Align
+}
+
 func render(s State, now time.Time) {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	defer termbox.Flush()
@@ -22,41 +54,97 @@ func render(s State, now time.Time) {
 	byteOffset, runeOffset := errorOffset(s.Phrase.Text, s.Phrase.Input)
 
 	if s.Phrase.ShowFail(now) {
-		left := min(int(s.Phrase.CurrentRound().FailedAt.Add(FailPenaltyDuration).Sub(now).Seconds()+1), FailPenaltySeconds)
-		msg := fmt.Sprintf(failMessage(s.Phrase.CurrentRound().Errors), left)
-		tbPrint((w/2)-(len(msg)/2), h/2, termbox.ColorRed|termbox.AttrBold, termbox.ColorDefault, msg)
+		left := min(int(s.Phrase.CurrentRound().FailedAt.
+			Add(FailPenaltyDuration).Sub(now).Seconds()+1), FailPenaltySeconds)
+		write(text(failMessage(s.Phrase.CurrentRound().Errors), left).
+			X(w / 2).Y(h / 2).Fg(red | bold).Align(Center))
 	} else {
-		tbPrint((w/2)-(len(s.Phrase.Text)/2), h/2, termbox.ColorWhite, termbox.ColorDefault, s.Phrase.Text+string('⏎'))
+		x := (w / 2) - (utf8.RuneCountInString(s.Phrase.Text) / 2)
+		write(text(s.Phrase.Text + string('⏎')).X(x).Y(h / 2).Fg(white))
 
-		tbPrints((w/2)-(len(s.Phrase.Text)/2), h/2, termbox.ColorGreen, termbox.ColorDefault, s.Phrase.Input[:byteOffset])
-		tbPrints((w/2)-(len(s.Phrase.Text)/2)+runeOffset, h/2, termbox.ColorBlack, termbox.ColorRed, s.Phrase.Input[byteOffset:])
+		write(text(spaced(s.Phrase.Input[:byteOffset])).
+			X(x).Y(h / 2).Fg(green))
+		write(text(spaced(s.Phrase.Input[byteOffset:])).
+			X(x + runeOffset).Y(h / 2).Fg(black).Bg(red))
 	}
 
 	if s.Repeat {
-		rep := "Repeating phrase"
-		tbPrint(w-len(rep)-1, 1, termbox.ColorDefault, termbox.ColorDefault, rep)
+		write(text("Repeating phrase").X(w - 1).Y(1).Align(Right))
 	}
 
-	tbPrint(1, 1, termbox.ColorDefault, termbox.ColorDefault, fmt.Sprintf("   Score: %.0f", s.Score))
-	tbPrint(1, 2, termbox.ColorDefault, termbox.ColorDefault, fmt.Sprintf("   Level: %d", level(s.Score)))
-	tbPrint(1, 3, termbox.ColorDefault, termbox.ColorDefault, fmt.Sprintf("Progress: %.0f%%", 100*progress(s.Score)))
+	write(text("   Score: %.0f", s.Score).X(1).Y(1))
+	write(text("   Level: %d", level(s.Score)).X(1).Y(2))
+	write(text("Progress: %.0f%%", 100*progress(s.Score)).X(1).Y(3))
 
-	mode := fmt.Sprintf("In %s mode", s.Phrase.Mode.Name())
-	tbPrint((w/2)-(len(mode)/2), h/2-4, s.Phrase.Mode.Attr(), termbox.ColorDefault, mode)
-	modeDesc := fmt.Sprintf("(%s!)", s.Phrase.Mode.Desc())
-	tbPrint((w/2)-(len(modeDesc)/2), h/2-3, termbox.ColorDefault, termbox.ColorDefault, modeDesc)
+	write(text("In %s mode", s.Phrase.Mode.Name()).
+		X(w / 2).Y(h/2 - 4).Fg(s.Phrase.Mode.Attr()).Align(Center))
+	write(text("(%s!)", s.Phrase.Mode.Desc()).X(w / 2).Y(h/2 - 3).Align(Center))
 
-	seconds, cps, wpm := computeStats(s.Phrase.Input[:byteOffset], s.Phrase.CurrentRound().StartedAt, now)
-	stats := fmt.Sprintf("%3d errors  %4.1f s  %5.2f cps  %3d wpm", s.Phrase.CurrentRound().Errors, seconds, cps, int(wpm))
-	tbPrint((w/2)-(len(stats)/2), h/2+4, termbox.ColorDefault, termbox.ColorDefault, stats)
+	seconds, _, _ := computeStats(
+		s.Phrase.Input[:byteOffset], s.Phrase.CurrentRound().StartedAt, now)
 
-	errors := fmt.Sprintf("%3d errors", s.Phrase.CurrentRound().Errors)
-	tbPrint((w/2)-(len(stats)/2), h/2+4, s.Phrase.ErrorCountColor(now), termbox.ColorDefault, errors)
+	write(text("%3d errors", s.Phrase.CurrentRound().Errors).
+		X(w/2 - 1).Y(h/2 + 4).Align(Right).Fg(s.Phrase.ErrorCountColor(now)))
+	write(text("%4.1f seconds", seconds).X(w/2 + 1).Y(h/2 + 4))
 
-	tbPrint(1, h-3, termbox.ColorDefault, termbox.ColorDefault,
-		"What's this fast, slow, medium thing?!")
-	tbPrint(1, h-2, termbox.ColorDefault, termbox.ColorDefault,
-		"http://steve-yegge.blogspot.com/2008/09/programmings-dirtiest-little-secret.html")
+	write(text("What's this fast, slow, medium thing?!").X(1).Y(h - 3))
+	write(text("http://steve-yegge.blogspot.com/2008/09/programmings-dirtiest-little-secret.html").X(1).Y(h - 2))
+}
+
+func text(t string, args ...interface{}) *printSpec {
+	s := &printSpec{}
+	if len(args) > 0 {
+		s.text = fmt.Sprintf(t, args...)
+	} else {
+		s.text = t
+	}
+	return s
+}
+
+func write(spec *printSpec) {
+	var x int
+	switch spec.align {
+	case Left:
+		x = spec.x
+	case Center:
+		x = spec.x - utf8.RuneCountInString(spec.text)/2
+	case Right:
+		x = spec.x - utf8.RuneCountInString(spec.text)
+	}
+
+	for _, c := range spec.text {
+		termbox.SetCell(x, spec.y, c, spec.fg, spec.bg)
+		x++
+	}
+}
+
+func spaced(s string) string {
+	return strings.Replace(s, " ", "␣", -1)
+}
+
+func (p *printSpec) Align(align Align) *printSpec {
+	p.align = align
+	return p
+}
+
+func (p *printSpec) X(x int) *printSpec {
+	p.x = x
+	return p
+}
+
+func (p *printSpec) Y(y int) *printSpec {
+	p.y = y
+	return p
+}
+
+func (p *printSpec) Fg(fg termbox.Attribute) *printSpec {
+	p.fg = fg
+	return p
+}
+
+func (p *printSpec) Bg(bg termbox.Attribute) *printSpec {
+	p.bg = bg
+	return p
 }
 
 func failMessage(errs int) string {
@@ -71,22 +159,5 @@ func failMessage(errs int) string {
 		return "Are you serious?!? Again in %d..."
 	default:
 		return "I don't even... %d..."
-	}
-}
-
-func tbPrint(x, y int, fg, bg termbox.Attribute, msg string) {
-	for _, c := range msg {
-		termbox.SetCell(x, y, c, fg, bg)
-		x++
-	}
-}
-
-func tbPrints(x, y int, fg, bg termbox.Attribute, msg string) {
-	for _, c := range msg {
-		if c == ' ' {
-			c = '␣'
-		}
-		termbox.SetCell(x, y, c, fg, bg)
-		x++
 	}
 }

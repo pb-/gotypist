@@ -8,6 +8,31 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+func loop(words []string, staticPhrase bool) bool {
+	state := *NewState(time.Now().UnixNano(), words, staticPhrase)
+	timers := make(map[time.Time]bool)
+
+	render(state, time.Now())
+	for !state.Exiting {
+		ev := termbox.PollEvent()
+		now := time.Now()
+
+		switch ev.Type {
+		case termbox.EventKey:
+			logStats(&state.Phrase, ev.Key, now)
+			state = reduce(state, ev, now)
+		case termbox.EventError:
+			panic(ev.Err)
+		case termbox.EventInterrupt:
+		}
+
+		render(state, now)
+		timers = manageTimers(timers, state.Timeouts, now, termbox.Interrupt)
+	}
+
+	return state.RageQuit
+}
+
 func main() {
 	var wordFile = flag.String(
 		"w", "/usr/share/dict/words", "path to word list")
@@ -31,30 +56,12 @@ func main() {
 	} else {
 		words = getWords(*wordFile)
 	}
-	state := *NewState(time.Now().UnixNano(), words, len(flag.Args()) != 0)
-	timers := make(map[time.Time]bool)
 
-	render(state, time.Now())
-	for !state.Exiting {
-		ev := termbox.PollEvent()
-		now := time.Now()
-
-		switch ev.Type {
-		case termbox.EventKey:
-			logStats(&state.Phrase, ev.Key, now)
-			state = reduce(state, ev, now)
-		case termbox.EventError:
-			panic(ev.Err)
-		case termbox.EventInterrupt:
-		}
-
-		render(state, now)
-		timers = manageTimers(timers, state.Timeouts, now, termbox.Interrupt)
-	}
+	rageQuit := loop(words, len(flag.Args()) > 0)
 
 	termbox.Close()
 
-	if state.RageQuit {
+	if rageQuit {
 		fmt.Println("Ragequitting, eh?")
 	}
 }

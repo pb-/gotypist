@@ -34,9 +34,14 @@ func loop(words []string, staticPhrase bool) bool {
 }
 
 func main() {
-	var wordFile = flag.String(
-		"w", "/usr/share/dict/words", "path to word list")
+	wordFile := flag.String("w", "/usr/share/dict/words", "path to word list")
+	demo := flag.Bool("d", false, "demo mode for screenshot")
 	flag.Parse()
+
+	if *demo {
+		run_demo()
+		return
+	}
 
 	err := termbox.Init()
 	if err != nil {

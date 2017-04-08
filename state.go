@@ -30,17 +30,18 @@ type Phrase struct {
 }
 
 type State struct {
-	Seed           int64
-	Words          []string
-	StaticPhrase   bool
-	Timeouts       map[time.Time]bool
-	Phrase         Phrase
-	Repeat         bool
-	Exiting        bool
-	RageQuit       bool
-	Score          float64
-	LastScore      float64
-	LastScoreUntil time.Time
+	Seed             int64
+	Words            []string
+	StaticPhrase     bool
+	Timeouts         map[time.Time]bool
+	Phrase           Phrase
+	Repeat           bool
+	Exiting          bool
+	RageQuit         bool
+	Score            float64
+	LastScore        float64
+	LastScorePercent float64
+	LastScoreUntil   time.Time
 }
 
 func reduce(s State, ev termbox.Event, now time.Time) State {
@@ -79,6 +80,7 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 				s.Timeouts[s.LastScoreUntil] = true
 				score := mustComputeScore(s.Phrase)
 				s.LastScore = score
+				s.LastScorePercent = score / maxScore(s.Phrase.Text)
 				s.Score += score
 				s = resetPhrase(s, false)
 			}

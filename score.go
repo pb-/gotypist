@@ -15,7 +15,8 @@ const (
 )
 
 func speedScore(text string, time time.Duration) float64 {
-	return scoreCharFactor * float64(utf8.RuneCountInString(text)) / (1 + time.Seconds())
+	l := float64(utf8.RuneCountInString(text))
+	return scoreCharFactor * l / (1 + time.Seconds()/l*scoreCharFactor)
 }
 
 func errorScore(text string, errors int) float64 {

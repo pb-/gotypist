@@ -19,8 +19,12 @@ func TestErrorScore(t *testing.T) {
 
 func TestSpeedScore(t *testing.T) {
 	assert.InEpsilon(t, 100., speedScore("helloworld", time.Duration(0)), epsilon)
-	assert.Equal(t, 100./1.1, speedScore(
+	assert.InEpsilon(t, 50., speedScore("helloworld", time.Duration(1*time.Second)), epsilon)
+	assert.InEpsilon(t, 100./3, speedScore("helloworld", time.Duration(2*time.Second)), epsilon)
+	assert.InEpsilon(t, 100./1.1, speedScore(
 		"helloworld", time.Duration(time.Millisecond*100)), epsilon)
+
+	assert.InEpsilon(t, 25., speedScore("hello", time.Duration(500*time.Millisecond)), epsilon)
 }
 
 func TestScore(t *testing.T) {

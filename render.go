@@ -74,8 +74,13 @@ func render(s State, now time.Time) {
 	}
 
 	if now.Before(s.LastScoreUntil) {
-		write(text("   Score: %.0f +%.0f (%.0f%%)", s.Score, s.LastScore,
+		write(text("   Score: %.0f  +%.0f (%.0f%%)", s.Score, s.LastScore,
 			100.*s.LastScorePercent).X(1).Y(1).Fg(blue | bold))
+
+		if level(s.Score-s.LastScore) != level(s.Score) {
+			write(text("   Level: %d  level up! ( ͡° ͜ʖ ͡°)",
+				level(s.Score)).X(1).Y(2).Fg(blue | bold))
+		}
 	}
 	write(text("   Score: %.0f", s.Score).X(1).Y(1))
 	write(text("   Level: %d", level(s.Score)).X(1).Y(2))

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -37,11 +39,63 @@ func computeStats(text string, start, end time.Time) (seconds, cps, wpm float64)
 	return seconds, cps, wpm
 }
 
-func writeStats(data []byte) {
-	filename := os.Getenv("HOME") + "/.gotypist.stats"
-	if name := os.Getenv("STATSFILE"); name != "" {
-		filename = name
+func computeTotalScore(stats []Statistics) float64 {
+	s := 0.
+
+	for i := 0; i < len(stats)-2; i++ {
+		fast := stats[i]
+		slow := stats[i+1]
+		normal := stats[i+2]
+
+		if fast.Mode != ModeFast ||
+			slow.Mode != ModeSlow ||
+			normal.Mode != ModeNormal {
+			continue
+		}
+
+		if fast.Text != slow.Text || slow.Text != normal.Text {
+			continue
+		}
+
+		s += weightedScore(
+			speedScore(fast.Text, fast.FinishedAt.Sub(fast.StartedAt)),
+			errorScore(slow.Text, slow.Errors),
+			score(normal.Text, normal.FinishedAt.Sub(normal.StartedAt), normal.Errors),
+		)
 	}
+
+	return s
+}
+
+func getTotalScore() float64 {
+	f, err := os.Open(getStatsFile())
+	if err != nil {
+		return 0.
+	}
+	defer f.Close()
+
+	reader := bufio.NewReader(f)
+	var stats []Statistics
+	for {
+		line, err := reader.ReadString('\n')
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			panic(err)
+		}
+		var s Statistics
+		err = json.Unmarshal([]byte(strings.TrimSpace(line)), &s)
+		if err != nil {
+			panic(err)
+		}
+		stats = append(stats, s)
+	}
+
+	return computeTotalScore(stats)
+}
+
+func writeStats(data []byte) {
+	filename := getStatsFile()
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		panic(err)
@@ -87,4 +141,12 @@ func logStats(phrase *Phrase, key termbox.Key, now time.Time) {
 	}
 
 	writeStats(formatStats(phrase, now))
+}
+
+func getStatsFile() string {
+	if name := os.Getenv("STATSFILE"); name != "" {
+		return name
+	}
+
+	return os.Getenv("HOME") + "/.gotypist.stats"
 }

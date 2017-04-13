@@ -8,8 +8,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-func loop(words []string, staticPhrase bool) bool {
-	state := *NewState(time.Now().UnixNano(), words, staticPhrase)
+func loop(state State) bool {
 	timers := make(map[time.Time]bool)
 
 	render(state, time.Now())
@@ -56,13 +55,16 @@ func main() {
 	}()
 
 	var words []string
-	if len(flag.Args()) > 0 {
+	staticPhrase := len(flag.Args()) > 0
+	if staticPhrase {
 		words = flag.Args()
 	} else {
 		words = getWords(*wordFile)
 	}
 
-	rageQuit := loop(words, len(flag.Args()) > 0)
+	state := *NewState(time.Now().UnixNano(), words, staticPhrase)
+	state.Score = getTotalScore()
+	rageQuit := loop(state)
 
 	termbox.Close()
 

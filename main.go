@@ -69,7 +69,7 @@ func main() {
 	termbox.Close()
 
 	if rageQuit {
-		fmt.Println("Ragequitting, eh?")
+		fmt.Println(banner)
 	}
 }
 
@@ -91,3 +91,11 @@ func manageTimers(timers, timeouts map[time.Time]bool, now time.Time, interruptF
 
 	return timers
 }
+
+const banner = `
+ ____       _       ____   _____    ___    _   _   ___   _____
+|  _ \     / \     / ___| | ____|  / _ \  | | | | |_ _| |_   _|
+| |_) |   / _ \   | |  _  |  _|   | | | | | | | |  | |    | |
+|  _ <   / ___ \  | |_| | | |___  | |_| | | |_| |  | |    | |
+|_| \_\ /_/   \_\  \____| |_____|  \__\_\  \___/  |___|   |_|
+`

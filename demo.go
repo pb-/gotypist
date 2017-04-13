@@ -17,7 +17,7 @@ func run_demo() {
 		0, []string{"correct", "horse", "battery", "staple"}, true)
 	now := time.Now()
 
-	state.Score = 9438
+	state.Score = 8938
 	state.LastScoreUntil = now.Add(1 * time.Second)
 	state.LastScore = 201
 	state.LastScorePercent = 0.87

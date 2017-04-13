@@ -20,6 +20,7 @@ type Statistics struct {
 	Seconds    float64   `json:"seconds"`
 	CPS        float64   `json:"cps"`
 	WPM        float64   `json:"wpm"`
+	Version    int       `json:"version"`
 }
 
 func computeStats(text string, start, end time.Time) (seconds, cps, wpm float64) {
@@ -69,6 +70,7 @@ func formatStats(phrase *Phrase, now time.Time) []byte {
 		Seconds:    seconds,
 		CPS:        cps,
 		WPM:        wpm,
+		Version:    1,
 	}
 
 	data, err := json.Marshal(stats)

@@ -216,6 +216,8 @@ func (p *Phrase) ShowFail(t time.Time) bool {
 func (p *Phrase) ErrorCountColor(t time.Time) termbox.Attribute {
 	if p.Mode == ModeFast && t.Sub(p.CurrentRound().FailedAt) < FastErrorHighlightDuration {
 		return termbox.ColorYellow | termbox.AttrBold
+	} else if p.Mode == ModeFast {
+		return termbox.ColorBlack
 	}
 	return termbox.ColorDefault
 }

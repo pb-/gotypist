@@ -93,9 +93,16 @@ func render(s State, now time.Time) {
 	seconds, _, _ := computeStats(
 		s.Phrase.Input[:byteOffset], s.Phrase.CurrentRound().StartedAt, now)
 
-	write(text("%3d errors", s.Phrase.CurrentRound().Errors).
-		X(w/2 - 1).Y(h/2 + 4).Align(Right).Fg(s.Phrase.ErrorCountColor(now)))
-	write(text("%4.1f seconds", seconds).X(w/2 + 1).Y(h/2 + 4))
+	errorsText := text("%3d errors", s.Phrase.CurrentRound().Errors).
+		Y(h/2 + 4).Fg(s.Phrase.ErrorCountColor(now))
+	secondsText := text("%4.1f seconds", seconds).Y(h/2 + 4)
+
+	if s.Phrase.Mode == ModeSlow {
+		write(errorsText.X(w / 2).Align(Center))
+	} else {
+		write(errorsText.X(w/2 - 1).Align(Right))
+		write(secondsText.X(w/2 + 1))
+	}
 
 	write(text("What's this fast, slow, medium thing?!").X(1).Y(h - 3))
 	write(text("http://steve-yegge.blogspot.com/2008/09/programmings-dirtiest-little-secret.html").X(1).Y(h - 2))

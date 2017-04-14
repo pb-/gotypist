@@ -6,6 +6,12 @@ A simple touch-typing tutor that follows [Steve Yegge's methodology](http://stev
 
 This project is mainly motivated by trying out [termbox-go](https://github.com/nsf/termbox-go), but it is definitely ready for productive learning.
 
+## Installation
+
+    git clone git@github.com:pb-/gotypist.git "$GOPATH/src/github.com/pb-/gotypist"
+    cd "$GOPATH/src/github.com/pb-/gotypist"
+    make dep build
+
 ## Usage
 
     gotypist [-w FILE] [-s] [WORD]...

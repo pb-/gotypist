@@ -57,7 +57,8 @@ func computeTotalScore(stats []Statistics) float64 {
 			continue
 		}
 
-		s += weightedScore(
+		s += finalScore(
+			fast.Text,
 			speedScore(fast.Text, fast.FinishedAt.Sub(fast.StartedAt)),
 			errorScore(slow.Text, slow.Errors),
 			score(normal.Text, normal.FinishedAt.Sub(normal.StartedAt), normal.Errors),

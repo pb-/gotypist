@@ -182,7 +182,8 @@ func mustComputeScore(phrase Phrase) float64 {
 		scores[mode] = s
 	}
 
-	return weightedScore(
+	return finalScore(
+		phrase.Text,
 		scores[ModeFast],
 		scores[ModeSlow],
 		scores[ModeNormal])

@@ -14,13 +14,15 @@ const (
 	scoreCharFactor = 10.
 )
 
+// Score between 0 and 1, 0.5 at 2 CPS
 func speedScore(text string, time time.Duration) float64 {
-	l := float64(utf8.RuneCountInString(text))
-	return scoreCharFactor * l / (1 + time.Seconds()/l*scoreCharFactor)
+	spc := time.Seconds() / float64(utf8.RuneCountInString(text))
+	return 1. / (1. + 2*spc)
 }
 
+// Score between 0 and 1, 0.5 at 1 error
 func errorScore(text string, errors int) float64 {
-	return scoreCharFactor * float64(utf8.RuneCountInString(text)) / (1 + float64(errors))
+	return 1. / (1. + float64(errors))
 }
 
 func score(text string, time time.Duration, errors int) float64 {
@@ -28,8 +30,8 @@ func score(text string, time time.Duration, errors int) float64 {
 		(1-speedErrorRatio)*errorScore(text, errors)
 }
 
-func weightedScore(fast, slow, normal float64) float64 {
-	return 0.15*fast + 0.35*slow + 0.5*normal
+func finalScore(text string, fast, slow, normal float64) float64 {
+	return maxScore(text) * math.Pow(0.15*fast+0.35*slow+0.5*normal, 2)
 }
 
 func maxScore(text string) float64 {

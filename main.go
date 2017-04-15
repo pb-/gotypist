@@ -38,7 +38,7 @@ func main() {
 	flag.Parse()
 
 	if *demo {
-		run_demo()
+		runDemo()
 		return
 	}
 

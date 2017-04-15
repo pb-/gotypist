@@ -6,7 +6,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-func run_demo() {
+func runDemo() {
 	err := termbox.Init()
 	if err != nil {
 		panic(err)

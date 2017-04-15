@@ -4,6 +4,14 @@ A simple touch-typing tutor that follows [Steve Yegge's methodology](http://stev
 
 ![Screenshot of a Gotypist session, normal mode](screenshot.png)
 
+The TL;DR of this methodology is that you make three passes for each phrase.
+
+ * **Fast** - type as fast as you can without any attention to proper technique or correctness
+ * **Slow** - use proper technique at all costs, go as slow as needed to achieve that
+ * **Normal** - type at *target speed*, try to make no mistakes
+
+Gotypist will score each pass accordingly: errors do not matter in the first pass, speed does not matter in the second pass, and both matter in the final pass. Check out `score.go` for details (which are subject to change).
+
 This project is mainly motivated by trying out [termbox-go](https://github.com/nsf/termbox-go), but it is definitely ready for productive learning.
 
 ## Installation

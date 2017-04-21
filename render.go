@@ -94,8 +94,9 @@ func render(s State, now time.Time) {
 		s.Phrase.Input[:byteOffset], s.Phrase.CurrentRound().StartedAt, now)
 
 	errorsText := text("%3d errors", s.Phrase.CurrentRound().Errors).
-		Y(h/2 + 4).Fg(s.Phrase.ErrorCountColor(now))
-	secondsText := text("%4.1f seconds", seconds).Y(h/2 + 4)
+		Y(h/2 + statsYOffset(!s.HideFingers)).Fg(s.Phrase.ErrorCountColor(now))
+	secondsText := text("%4.1f seconds", seconds).
+		Y(h/2 + statsYOffset(!s.HideFingers))
 
 	if s.Phrase.Mode == ModeSlow {
 		write(errorsText.X(w / 2).Align(Center))
@@ -106,6 +107,67 @@ func render(s State, now time.Time) {
 
 	write(text("What's this fast, slow, medium thing?!").X(1).Y(h - 3))
 	write(text("http://steve-yegge.blogspot.com/2008/09/programmings-dirtiest-little-secret.html").X(1).Y(h - 2))
+
+	if !s.HideFingers {
+		finger := RightPinky // for backspace/enter
+		if byteOffset < len(s.Phrase.Text) {
+			expected, _ := utf8.DecodeRuneInString(s.Phrase.Text[byteOffset:])
+			finger = FingerMap[expected]
+		}
+		renderFingers(w, h/2+2, finger)
+	}
+}
+
+func fingerYOffset(f Finger) int {
+	if f == LeftThumb || f == RightThumb {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+func fingerXOffset(f Finger) int {
+	if f >= RightThumb {
+		return 2
+	} else {
+		return 0
+	}
+}
+
+func fingerSymbol(f Finger) rune {
+	switch f {
+	case LeftThumb:
+		return '/'
+	case RightThumb:
+		return '\\'
+	}
+	return '|'
+}
+
+func statsYOffset(showFingers bool) int {
+	if showFingers {
+		return 6
+	} else {
+		return 4
+	}
+}
+
+func fingerAttr(highlight bool) (termbox.Attribute, termbox.Attribute) {
+	if highlight {
+		return black, blue
+	} else {
+		return termbox.ColorDefault, termbox.ColorDefault
+	}
+}
+
+func renderFingers(w, y int, finger Finger) {
+	x := w/2 - 6
+
+	for i, f := range FingerSequence {
+		fg, bg := fingerAttr(f&finger != 0)
+		termbox.SetCell(
+			x+i+fingerXOffset(f), y+fingerYOffset(f), fingerSymbol(f), fg, bg)
+	}
 }
 
 func text(t string, args ...interface{}) *printSpec {

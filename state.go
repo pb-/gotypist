@@ -35,6 +35,7 @@ type State struct {
 	StaticPhrase     bool
 	Timeouts         map[time.Time]bool
 	Phrase           Phrase
+	HideFingers      bool
 	Repeat           bool
 	Exiting          bool
 	RageQuit         bool
@@ -69,6 +70,8 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		s = resetPhrase(s, true)
 	case termbox.KeyCtrlR:
 		s.Repeat = !s.Repeat
+	case termbox.KeyCtrlI:
+		s.HideFingers = !s.HideFingers
 	case termbox.KeyEnter, termbox.KeyCtrlJ:
 		if s.Phrase.Input == s.Phrase.Text {
 			s.Phrase.CurrentRound().FinishedAt = now

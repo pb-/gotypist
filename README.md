@@ -33,3 +33,4 @@ This project is mainly motivated by trying out [termbox-go](https://github.com/n
     ESC   quit
     C-F   skip forward to the next phrase
     C-R   toggle repeat phrase mode
+    C-I   toggle finger usage hints

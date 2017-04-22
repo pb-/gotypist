@@ -18,7 +18,7 @@ func loop(state State) bool {
 
 		switch ev.Type {
 		case termbox.EventKey:
-			logStats(&state.Phrase, ev.Key, now)
+			go logStats(&state.Phrase, ev.Key, now)
 			state = reduce(state, ev, now)
 		case termbox.EventError:
 			panic(ev.Err)

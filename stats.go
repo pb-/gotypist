@@ -136,12 +136,12 @@ func formatStats(phrase *Phrase, now time.Time) []byte {
 	return data
 }
 
-func logStats(phrase *Phrase, key termbox.Key, now time.Time) {
+func logStats(phrase Phrase, key termbox.Key, now time.Time) {
 	if key != termbox.KeyEnter || phrase.Input != phrase.Text {
 		return
 	}
 
-	writeStats(formatStats(phrase, now))
+	writeStats(formatStats(&phrase, now))
 }
 
 func getStatsFile() string {

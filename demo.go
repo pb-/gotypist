@@ -25,6 +25,7 @@ func runDemo() {
 	state.Phrase.CurrentRound().Errors = 2
 	state.Phrase.CurrentRound().StartedAt = now.Add(-1941 * time.Millisecond)
 	state.Phrase.Input = "correct horse bta"
+	state.HideFingers = false
 
 	for {
 		render(state, now)

@@ -198,6 +198,7 @@ func NewState(seed int64, words []string, staticPhrase bool) *State {
 		Seed:         seed,
 		Words:        words,
 		StaticPhrase: staticPhrase,
+		HideFingers:  true,
 	}, false)
 
 	return &s

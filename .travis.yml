@@ -1,0 +1,15 @@
+language: go
+
+go:
+  - 1.9.x
+
+go_import_path: github.com/pb-/gotypist
+
+# use containers which run faster and have cache
+sudo: false
+
+script:
+  - go build ./...
+
+notifications:
+  email: false

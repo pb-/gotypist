@@ -51,7 +51,7 @@ func readWords(path string) ([]string, error) {
 
 func getWords(path string) []string {
 	words, err := readWords(path)
-	if err != nil || len(words) < 9 {
+	if err != nil || len(words) < 1 {
 		return []string{"the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"}
 	}
 	return words

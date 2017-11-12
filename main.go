@@ -8,6 +8,18 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+var (
+	wordFile string
+	demo     bool
+	isCode   bool
+)
+
+func init() {
+	flag.StringVar(&wordFile, "w", "/usr/share/dict/words", "path to word list")
+	flag.BoolVar(&demo, "d", false, "demo mode for screenshot")
+	flag.BoolVar(&isCode, "c", false, "Expect code in word list (i.e. use any line)")
+}
+
 func loop(state State) bool {
 	timers := make(map[time.Time]bool)
 
@@ -33,11 +45,9 @@ func loop(state State) bool {
 }
 
 func main() {
-	wordFile := flag.String("w", "/usr/share/dict/words", "path to word list")
-	demo := flag.Bool("d", false, "demo mode for screenshot")
 	flag.Parse()
 
-	if *demo {
+	if demo {
 		runDemo()
 		return
 	}
@@ -59,7 +69,7 @@ func main() {
 	if staticPhrase {
 		words = flag.Args()
 	} else {
-		words = getWords(*wordFile)
+		words = getWords(wordFile)
 	}
 
 	state := *NewState(time.Now().UnixNano(), words, staticPhrase)

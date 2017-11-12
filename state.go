@@ -2,7 +2,6 @@ package main
 
 import (
 	"math/rand"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -31,8 +30,7 @@ type Phrase struct {
 
 type State struct {
 	Seed             int64
-	Words            []string
-	StaticPhrase     bool
+	PhraseGenerator  PhraseFunc
 	Timeouts         map[time.Time]bool
 	Phrase           Phrase
 	HideFingers      bool
@@ -135,14 +133,13 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 }
 
 func resetPhrase(state State, forceNext bool) State {
-	if state.StaticPhrase {
-		state.Phrase = *NewPhrase(strings.Join(state.Words, " "))
-	} else {
-		if !state.Repeat || forceNext {
-			state.Seed = nextSeed(state.Seed)
-		}
-		state.Phrase = *NewPhrase(generateText(state.Seed, state.Words))
+	seed := state.Seed
+	if !state.Repeat || forceNext {
+		seed = nextSeed(state.Seed)
 	}
+	state.Phrase = *NewPhrase(state.PhraseGenerator(seed))
+	state.Seed = seed
+
 	return state
 }
 
@@ -192,13 +189,12 @@ func mustComputeScore(phrase Phrase) float64 {
 		scores[ModeNormal])
 }
 
-func NewState(seed int64, words []string, staticPhrase bool) *State {
+func NewState(seed int64, phraseGenerator PhraseFunc) *State {
 	s := resetPhrase(State{
-		Timeouts:     make(map[time.Time]bool),
-		Seed:         seed,
-		Words:        words,
-		StaticPhrase: staticPhrase,
-		HideFingers:  true,
+		PhraseGenerator: phraseGenerator,
+		Timeouts:        make(map[time.Time]bool),
+		Seed:            seed,
+		HideFingers:     true,
 	}, false)
 
 	return &s

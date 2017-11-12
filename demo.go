@@ -13,8 +13,7 @@ func runDemo() {
 	}
 	defer termbox.Close()
 
-	state := *NewState(
-		0, []string{"correct", "horse", "battery", "staple"}, true)
+	state := *NewState(0, StaticPhrase("correct horse battery staple"))
 	now := time.Now()
 
 	state.Score = 8938

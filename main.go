@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/nsf/termbox-go"
@@ -54,15 +55,19 @@ func main() {
 		}
 	}()
 
-	var words []string
-	staticPhrase := len(flag.Args()) > 0
-	if staticPhrase {
-		words = flag.Args()
+	var phraseFunc PhraseFunc
+	if len(flag.Args()) > 0 {
+		phraseFunc = StaticPhrase(strings.Join(flag.Args(), " "))
 	} else {
-		words = getWords(*wordFile)
+		dict, err := loadDictionary(*wordFile)
+		if err != nil || len(dict) == 0 {
+			phraseFunc = DefaultPhrase
+		} else {
+			phraseFunc = RandomPhrase(dict, 30)
+		}
 	}
 
-	state := *NewState(time.Now().UnixNano(), words, staticPhrase)
+	state := *NewState(time.Now().UnixNano(), phraseFunc)
 	state.Score = getTotalScore()
 	rageQuit := loop(state)
 

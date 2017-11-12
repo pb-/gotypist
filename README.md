@@ -16,9 +16,9 @@ This project is mainly motivated by trying out [termbox-go](https://github.com/n
 
 ## Installation
 
-    git clone https://github.com/pb-/gotypist.git "$GOPATH/src/github.com/pb-/gotypist"
-    cd "$GOPATH/src/github.com/pb-/gotypist"
-    make dep build
+```
+go get github.com/pb-/gotypist
+```
 
 ## Usage
 

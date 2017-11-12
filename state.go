@@ -133,12 +133,10 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 }
 
 func resetPhrase(state State, forceNext bool) State {
-	seed := state.Seed
 	if !state.Repeat || forceNext {
-		seed = nextSeed(state.Seed)
+		state.Seed = nextSeed(state.Seed)
 	}
-	state.Phrase = *NewPhrase(state.PhraseGenerator(seed))
-	state.Seed = seed
+	state.Phrase = *NewPhrase(state.PhraseGenerator(state.Seed))
 
 	return state
 }

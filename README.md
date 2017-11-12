@@ -26,6 +26,7 @@ go get github.com/pb-/gotypist
 
     -w FILE     Use this file as word list instead of /usr/share/dict/words
     -s          Run in demo mode to take a screenshot
+    -c          Expect code in word list (i.e use any line)
     WORD...     Explicitly specify a phrase
 
 ## Key bindings

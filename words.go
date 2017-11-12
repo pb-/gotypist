@@ -43,7 +43,10 @@ func readWords(path string) ([]string, error) {
 		}
 
 		trimmed := strings.TrimSpace(line)
-		if pattern.MatchString(trimmed) && len(trimmed) < 8 {
+
+		if isCode {
+			words = append(words, trimmed)
+		} else if pattern.MatchString(trimmed) && len(trimmed) < 8 {
 			words = append(words, trimmed)
 		}
 	}

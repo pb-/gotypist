@@ -24,7 +24,7 @@ go get github.com/pb-/gotypist
 
     gotypist [-w FILE] [-s] [WORD]...
 
-    -n PROB     Sprinkle in random numbers with probability PROB
+    -n PROB     Sprinkle in random numbers with probability 0 <= PROB <= 1
     -s          Run in demo mode to take a screenshot
     -w FILE     Use this file as word list instead of /usr/share/dict/words
     WORD...     Explicitly specify a phrase

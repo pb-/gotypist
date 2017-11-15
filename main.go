@@ -36,6 +36,7 @@ func loop(state State) bool {
 func main() {
 	wordFile := flag.String("w", "/usr/share/dict/words", "path to word list")
 	demo := flag.Bool("d", false, "demo mode for screenshot")
+	numberProb := flag.Float64("n", 0, "mix in numbers with given probability (with -w)")
 	flag.Parse()
 
 	if *demo {
@@ -63,7 +64,7 @@ func main() {
 		if err != nil || len(dict) == 0 {
 			phraseFunc = DefaultPhrase
 		} else {
-			phraseFunc = RandomPhrase(dict, 30)
+			phraseFunc = RandomPhrase(dict, 30, *numberProb)
 		}
 	}
 

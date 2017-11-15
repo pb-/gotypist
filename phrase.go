@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -26,13 +27,18 @@ func StaticPhrase(phrase string) PhraseFunc {
 }
 
 // RandomPhrase composes a random phrase with given length from given words
-func RandomPhrase(words []string, minLength int) PhraseFunc {
+func RandomPhrase(words []string, minLength int, numProb float64) PhraseFunc {
 	return func(seed int64) string {
 		rand := rand.New(rand.NewSource(seed))
 		var phrase []string
 		l := -1
 		for l < minLength {
-			w := words[rand.Int31n(int32(len(words)))]
+			var w string
+			if rand.Float64() < numProb {
+				w = strconv.FormatInt(rand.Int63n(10000), 10)
+			} else {
+				w = words[rand.Int31n(int32(len(words)))]
+			}
 			phrase = append(phrase, w)
 			l += 1 + len(w)
 		}

@@ -12,7 +12,7 @@ The TL;DR of this methodology is that you make three passes for each phrase.
 
 Gotypist will score each pass accordingly: errors do not matter in the first pass, speed does not matter in the second pass, and both matter in the final pass. Check out `score.go` for details (which are subject to change).
 
-This project is mainly motivated by trying out [termbox-go](https://github.com/nsf/termbox-go), but it is definitely ready for productive learning.
+This project was mainly motivated by trying out [termbox-go](https://github.com/nsf/termbox-go), but it is definitely ready for productive learning.
 
 ## Installation
 
@@ -24,8 +24,9 @@ go get github.com/pb-/gotypist
 
     gotypist [-w FILE] [-s] [WORD]...
 
-    -w FILE     Use this file as word list instead of /usr/share/dict/words
+    -n PROB     Sprinkle in random numbers with probability PROB
     -s          Run in demo mode to take a screenshot
+    -w FILE     Use this file as word list instead of /usr/share/dict/words
     WORD...     Explicitly specify a phrase
 
 ## Key bindings

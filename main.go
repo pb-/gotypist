@@ -35,6 +35,7 @@ func loop(state State) bool {
 
 func main() {
 	wordFile := flag.String("w", "/usr/share/dict/words", "path to word list")
+	codeFile := flag.String("c", "", "path to code file")
 	demo := flag.Bool("d", false, "demo mode for screenshot")
 	numberProb := flag.Float64("n", 0, "mix in numbers with given probability (with -w)")
 	flag.Parse()
@@ -60,11 +61,20 @@ func main() {
 	if len(flag.Args()) > 0 {
 		phraseFunc = StaticPhrase(strings.Join(flag.Args(), " "))
 	} else {
-		dict, err := loadDictionary(*wordFile)
-		if err != nil || len(dict) == 0 {
-			phraseFunc = DefaultPhrase
+		if *codeFile != "" {
+			lines, err := loadCodeFile(*codeFile)
+			if err != nil || len(lines) == 0 {
+				phraseFunc = DefaultPhrase
+			} else {
+				phraseFunc = SequentialLine(lines)
+			}
 		} else {
-			phraseFunc = RandomPhrase(dict, 30, *numberProb)
+			dict, err := loadDictionary(*wordFile)
+			if err != nil || len(dict) == 0 {
+				phraseFunc = DefaultPhrase
+			} else {
+				phraseFunc = RandomPhrase(dict, 30, *numberProb)
+			}
 		}
 	}
 

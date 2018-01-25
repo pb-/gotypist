@@ -46,6 +46,16 @@ func RandomPhrase(words []string, minLength int, numProb float64) PhraseFunc {
 	}
 }
 
+// SequentialLine goes through a sequence of lines.
+func SequentialLine(lines []string) PhraseFunc {
+	index := 0
+	return func(_ int64) string {
+		line := lines[index]
+		index = (index + 1) % len(lines)
+		return line
+	}
+}
+
 func loadDictionary(path string) ([]string, error) {
 	lines, err := readLines(path)
 	if err != nil {
@@ -55,13 +65,22 @@ func loadDictionary(path string) ([]string, error) {
 	return filterWords(lines, `^[a-z]+$`, 8), nil
 }
 
-func filterWords(words []string, pattern string, minLength int) []string {
+func loadCodeFile(path string) ([]string, error) {
+	lines, err := readLines(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return filterWords(lines, `^[^/][^/]`, 80), nil
+}
+
+func filterWords(words []string, pattern string, maxLength int) []string {
 	filtered := make([]string, 0)
 	compiled := regexp.MustCompile(pattern)
 
 	for _, word := range words {
 		trimmed := strings.TrimSpace(word)
-		if compiled.MatchString(trimmed) && len(trimmed) < minLength {
+		if compiled.MatchString(trimmed) && len(trimmed) <= maxLength {
 			filtered = append(filtered, trimmed)
 		}
 	}

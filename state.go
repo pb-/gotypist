@@ -44,6 +44,12 @@ type State struct {
 }
 
 func reduce(s State, ev termbox.Event, now time.Time) State {
+	for k := range s.Timeouts {
+		if k.Before(now) {
+			delete(s.Timeouts, k)
+		}
+	}
+
 	if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 		s.Exiting = true
 		if s.Phrase.ShowFail(now) {
@@ -60,10 +66,7 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 
 	switch ev.Key {
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
-		if len(s.Phrase.Input) > 0 {
-			_, l := utf8.DecodeLastRuneInString(s.Phrase.Input)
-			s.Phrase.Input = s.Phrase.Input[:len(s.Phrase.Input)-l]
-		}
+		return reduceBackspace(s)
 	case termbox.KeyCtrlF:
 		s = resetPhrase(s, true)
 	case termbox.KeyCtrlR:
@@ -71,62 +74,84 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 	case termbox.KeyCtrlI:
 		s.HideFingers = !s.HideFingers
 	case termbox.KeyEnter, termbox.KeyCtrlJ:
-		if s.Phrase.Input == s.Phrase.Text {
-			s.Phrase.CurrentRound().FinishedAt = now
-			if s.Phrase.Mode != ModeNormal {
-				s.Phrase.Mode++
-				s.Phrase.Input = ""
-			} else {
-				s.LastScoreUntil = now.Add(ScoreHighlightDuration)
-				s.Timeouts[s.LastScoreUntil] = true
-				score := mustComputeScore(s.Phrase)
-				s.LastScore = score
-				s.LastScorePercent = score / maxScore(s.Phrase.Text)
-				s.Score += score
-				s = resetPhrase(s, false)
-			}
-		}
+		return reduceEnter(s, now)
 	default:
-		var ch rune
-		if ev.Key == termbox.KeySpace {
-			ch = ' '
-		} else {
-			ch = ev.Ch
-		}
-
-		if ch != 0 {
-			exp := s.Phrase.expected()
-			if ch != exp {
-				if exp != 0 {
-					s.Phrase.CurrentRound().Typos = append(
-						s.Phrase.CurrentRound().Typos, Typo{
-							Expected: string(exp),
-							Actual:   string(ch),
-						})
-				}
-				s.Phrase.CurrentRound().Errors++
-				s.Phrase.CurrentRound().FailedAt = now
-				if s.Phrase.Mode == ModeSlow {
-					s.Phrase.Input = ""
-					for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
-						s.Timeouts[now.Add(time.Second*t)] = true
-					}
-				} else if s.Phrase.Mode == ModeNormal {
-					s.Phrase.Input += string(ch)
-				} else if s.Phrase.Mode == ModeFast {
-					s.Timeouts[now.Add(FastErrorHighlightDuration)] = true
-				}
-			} else {
-				s.Phrase.Input += string(ch)
-			}
-		}
-
+		return reduceCharInput(s, ev, now)
 	}
 
-	for k := range s.Timeouts {
-		if k.Before(now) {
-			delete(s.Timeouts, k)
+	return s
+}
+
+func reduceBackspace(s State) State {
+	if len(s.Phrase.Input) == 0 {
+		return s
+	}
+
+	_, l := utf8.DecodeLastRuneInString(s.Phrase.Input)
+	s.Phrase.Input = s.Phrase.Input[:len(s.Phrase.Input)-l]
+	return s
+}
+
+func reduceEnter(s State, now time.Time) State {
+	if s.Phrase.Input != s.Phrase.Text {
+		return s
+	}
+
+	s.Phrase.CurrentRound().FinishedAt = now
+	if s.Phrase.Mode != ModeNormal {
+		s.Phrase.Mode++
+		s.Phrase.Input = ""
+		return s
+	}
+
+	s.LastScoreUntil = now.Add(ScoreHighlightDuration)
+	s.Timeouts[s.LastScoreUntil] = true
+	score := mustComputeScore(s.Phrase)
+	s.LastScore = score
+	s.LastScorePercent = score / maxScore(s.Phrase.Text)
+	s.Score += score
+	s = resetPhrase(s, false)
+
+	return s
+}
+
+func reduceCharInput(s State, ev termbox.Event, now time.Time) State {
+	var ch rune
+	if ev.Key == termbox.KeySpace {
+		ch = ' '
+	} else {
+		ch = ev.Ch
+	}
+
+	if ch == 0 {
+		return s
+	}
+
+	exp := s.Phrase.expected()
+	if ch == exp {
+		s.Phrase.Input += string(ch)
+		return s
+	}
+
+	if exp != 0 {
+		s.Phrase.CurrentRound().Typos = append(
+			s.Phrase.CurrentRound().Typos, Typo{
+				Expected: string(exp),
+				Actual:   string(ch),
+			})
+	}
+
+	s.Phrase.CurrentRound().Errors++
+	s.Phrase.CurrentRound().FailedAt = now
+	if s.Phrase.Mode == ModeSlow {
+		s.Phrase.Input = ""
+		for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
+			s.Timeouts[now.Add(time.Second*t)] = true
 		}
+	} else if s.Phrase.Mode == ModeNormal {
+		s.Phrase.Input += string(ch)
+	} else if s.Phrase.Mode == ModeFast {
+		s.Timeouts[now.Add(FastErrorHighlightDuration)] = true
 	}
 
 	return s

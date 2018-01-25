@@ -1,0 +1,23 @@
+ls
+ls -lha
+ps aufx
+netstat -antpe | grep LISTEN
+git push origin master
+for i in `seq 1 10`; do echo $i; done
+less ~/.ssh/config
+source .profiles
+cd ..
+ssh-add
+nc 192.168.20.20 4711 > data.bin
+git commit -am 'good stuff'
+tail -f /var/log/syslog
+source env/bin/activate
+git status
+du -h --max-depth 1
+git commit -a --amend
+gpg -d < ciphertext > plaintext
+ssh ubuntu@pi
+xsel | gpg -d
+top
+uptime
+ping youtube.com

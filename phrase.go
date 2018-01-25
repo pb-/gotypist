@@ -11,22 +11,22 @@ import (
 	"strings"
 )
 
-// PhraseFunc generates a phrase from a seed
+// PhraseFunc generates a phrase from a seed.
 type PhraseFunc func(seed int64) string
 
-// DefaultPhrase generates a built-in fallback phrase
+// DefaultPhrase generates a built-in fallback phrase.
 func DefaultPhrase(seed int64) string {
 	return "the quick brown fox jumps over the lazy dog"
 }
 
-// StaticPhrase returns a static phrase generator function with given phrase
+// StaticPhrase returns a static phrase generator function with given phrase.
 func StaticPhrase(phrase string) PhraseFunc {
 	return func(seed int64) string {
 		return phrase
 	}
 }
 
-// RandomPhrase composes a random phrase with given length from given words
+// RandomPhrase composes a random phrase with given length from given words.
 func RandomPhrase(words []string, minLength int, numProb float64) PhraseFunc {
 	return func(seed int64) string {
 		rand := rand.New(rand.NewSource(seed))

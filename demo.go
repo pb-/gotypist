@@ -7,10 +7,6 @@ import (
 )
 
 func runDemo() {
-	err := termbox.Init()
-	if err != nil {
-		panic(err)
-	}
 	defer termbox.Close()
 
 	state := *NewState(0, StaticPhrase("correct horse battery staple"))

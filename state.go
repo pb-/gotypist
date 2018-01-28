@@ -1,3 +1,4 @@
+// only pure code in this file (no side effects)
 package main
 
 import (
@@ -30,11 +31,9 @@ type Phrase struct {
 type State struct {
 	Seed             int64
 	PhraseGenerator  PhraseFunc
-	Timeouts         map[time.Time]bool
 	Phrase           Phrase
 	HideFingers      bool
 	Repeat           bool
-	Exiting          bool
 	RageQuit         bool
 	Score            float64
 	LastScore        float64
@@ -42,21 +41,14 @@ type State struct {
 	LastScoreUntil   time.Time
 }
 
-func reduce(s State, ev termbox.Event, now time.Time) State {
-	for k := range s.Timeouts {
-		if k.Before(now) {
-			delete(s.Timeouts, k)
-		}
-	}
+func reduce(s State, msg Message, now time.Time) (State, []Command) {
+	ev := msg.(termbox.Event)
 
 	if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
-		s.Exiting = true
-		if s.Phrase.ShowFail(now) {
-			s.RageQuit = true
-		}
+		return s, []Command{Exit{GoodbyeMessage: banner(s, now)}}
 	}
 	if s.Phrase.ShowFail(now) {
-		return s
+		return s, Noop
 	}
 
 	if s.Phrase.CurrentRound().StartedAt.IsZero() {
@@ -78,43 +70,42 @@ func reduce(s State, ev termbox.Event, now time.Time) State {
 		return reduceCharInput(s, ev, now)
 	}
 
-	return s
+	return s, Noop
 }
 
-func reduceBackspace(s State) State {
+func reduceBackspace(s State) (State, []Command) {
 	if len(s.Phrase.Input) == 0 {
-		return s
+		return s, Noop
 	}
 
 	_, l := utf8.DecodeLastRuneInString(s.Phrase.Input)
 	s.Phrase.Input = s.Phrase.Input[:len(s.Phrase.Input)-l]
-	return s
+	return s, Noop
 }
 
-func reduceEnter(s State, now time.Time) State {
+func reduceEnter(s State, now time.Time) (State, []Command) {
 	if s.Phrase.Input != s.Phrase.Text {
-		return s
+		return s, Noop
 	}
 
 	s.Phrase.CurrentRound().FinishedAt = now
 	if s.Phrase.Mode != ModeNormal {
 		s.Phrase.Mode++
 		s.Phrase.Input = ""
-		return s
+		return s, Noop
 	}
 
 	s.LastScoreUntil = now.Add(ScoreHighlightDuration)
-	s.Timeouts[s.LastScoreUntil] = true
 	score := mustComputeScore(s.Phrase)
 	s.LastScore = score
 	s.LastScorePercent = score / maxScore(s.Phrase.Text)
 	s.Score += score
 	s = resetPhrase(s, false)
 
-	return s
+	return s, []Command{Interrupt{ScoreHighlightDuration}}
 }
 
-func reduceCharInput(s State, ev termbox.Event, now time.Time) State {
+func reduceCharInput(s State, ev termbox.Event, now time.Time) (State, []Command) {
 	var ch rune
 	if ev.Key == termbox.KeySpace {
 		ch = ' '
@@ -123,13 +114,13 @@ func reduceCharInput(s State, ev termbox.Event, now time.Time) State {
 	}
 
 	if ch == 0 {
-		return s
+		return s, Noop
 	}
 
 	exp := s.Phrase.expected()
 	if ch == exp {
 		s.Phrase.Input += string(ch)
-		return s
+		return s, Noop
 	}
 
 	if exp != 0 {
@@ -142,18 +133,23 @@ func reduceCharInput(s State, ev termbox.Event, now time.Time) State {
 
 	s.Phrase.CurrentRound().Errors++
 	s.Phrase.CurrentRound().FailedAt = now
-	if s.Phrase.Mode == ModeSlow {
-		s.Phrase.Input = ""
-		for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
-			s.Timeouts[now.Add(time.Second*t)] = true
-		}
-	} else if s.Phrase.Mode == ModeNormal {
-		s.Phrase.Input += string(ch)
-	} else if s.Phrase.Mode == ModeFast {
-		s.Timeouts[now.Add(FastErrorHighlightDuration)] = true
+
+	if s.Phrase.Mode == ModeFast {
+		return s, []Command{Interrupt{FastErrorHighlightDuration}}
 	}
 
-	return s
+	if s.Phrase.Mode == ModeSlow {
+		s.Phrase.Input = ""
+		cmds := []Command{}
+		for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
+			cmds = append(cmds, Interrupt{t * time.Second})
+		}
+		return s, cmds
+	}
+
+	// normal mode
+	s.Phrase.Input += string(ch)
+	return s, Noop
 }
 
 func resetPhrase(state State, forceNext bool) State {
@@ -216,7 +212,6 @@ func mustComputeScore(phrase Phrase) float64 {
 func NewState(seed int64, phraseGenerator PhraseFunc) *State {
 	s := resetPhrase(State{
 		PhraseGenerator: phraseGenerator,
-		Timeouts:        make(map[time.Time]bool),
 		Seed:            seed,
 		HideFingers:     true,
 	}, false)
@@ -254,4 +249,18 @@ func (p *Phrase) expected() rune {
 
 	expected, _ := utf8.DecodeRuneInString(p.Text[len(p.Input):])
 	return expected
+}
+
+func banner(s State, t time.Time) string {
+	if s.Phrase.ShowFail(t) {
+		return `
+ ____       _       ____   _____    ___    _   _   ___   _____
+|  _ \     / \     / ___| | ____|  / _ \  | | | | |_ _| |_   _|
+| |_) |   / _ \   | |  _  |  _|   | | | | | | | |  | |    | |
+|  _ <   / ___ \  | |_| | | |___  | |_| | | |_| |  | |    | |
+|_| \_\ /_/   \_\  \____| |_____|  \__\_\  \___/  |___|   |_|
+`
+	}
+
+	return ""
 }

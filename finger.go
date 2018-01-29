@@ -35,7 +35,7 @@ var sourceMap = map[Finger]string{
 	RightIndex:  "6yhn7ujm^&",
 	RightMiddle: "8ik*,<",
 	RightRing:   "9ol(.>",
-	RightPinky:  "0p)-_=+[{]}'\"/?",
+	RightPinky:  "0p)-_=+[{]}\\|'\"/?",
 }
 
 func init() {

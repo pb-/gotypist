@@ -28,24 +28,27 @@ func Init(args []string, env map[string]string) (State, []Command) {
 		return State{}, []Command{Exit{Status: 1, GoodbyeMessage: err.Error()}}
 	}
 
+	commands := []Command{}
+
 	if len(commandLine.Args()) > 0 {
 		state.PhraseGenerator = StaticPhrase(strings.Join(commandLine.Args(), " "))
 		state = resetPhrase(state, false)
+	} else {
+		commands = append(commands, ReadFile{
+			Filename: *datafile,
+			Success:  func(data []byte) Message { return Datasource{Data: data} },
+			Error:    PassError,
+		})
 	}
 
 	home, _ := env["HOME"]
 	state.Statsfile = home + "/.gotypist.stats"
 
-	return state, []Command{
-		ReadFile{
-			Filename: *datafile,
-			Success:  func(data []byte) Message { return Datasource{Data: data} },
-			Error:    PassError,
-		},
+	return state, append(commands,
 		ReadFile{
 			Filename: state.Statsfile,
 			Success:  func(data []byte) Message { return StatsData{Data: data} },
 		},
 		PeriodicInterrupt{250 * time.Millisecond},
-	}
+	)
 }

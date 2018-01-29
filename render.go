@@ -121,17 +121,15 @@ func render(s State, now time.Time) {
 func fingerYOffset(f Finger) int {
 	if f == LeftThumb || f == RightThumb {
 		return 1
-	} else {
-		return 0
 	}
+	return 0
 }
 
 func fingerXOffset(f Finger) int {
 	if f >= RightThumb {
 		return 2
-	} else {
-		return 0
 	}
+	return 0
 }
 
 func fingerSymbol(f Finger) rune {
@@ -147,17 +145,15 @@ func fingerSymbol(f Finger) rune {
 func statsYOffset(showFingers bool) int {
 	if showFingers {
 		return 6
-	} else {
-		return 4
 	}
+	return 4
 }
 
 func fingerAttr(highlight bool) (termbox.Attribute, termbox.Attribute) {
 	if highlight {
 		return black, blue
-	} else {
-		return termbox.ColorDefault, termbox.ColorDefault
 	}
+	return termbox.ColorDefault, termbox.ColorDefault
 }
 
 func renderFingers(w, y int, finger Finger) {

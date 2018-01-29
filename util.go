@@ -6,11 +6,3 @@ func min(a, b int) int {
 	}
 	return b
 }
-
-func must(errArg int) func(...interface{}) {
-	return func(retval ...interface{}) {
-		if err := retval[errArg]; err != nil {
-			panic(err)
-		}
-	}
-}

@@ -1,15 +1,14 @@
+// only pure code in this file
 package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"io"
-	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	"github.com/nsf/termbox-go"
 )
 
 type Statistics struct {
@@ -68,14 +67,8 @@ func computeTotalScore(stats []Statistics) float64 {
 	return s
 }
 
-func getTotalScore() float64 {
-	f, err := os.Open(getStatsFile())
-	if err != nil {
-		return 0.
-	}
-	defer f.Close()
-
-	reader := bufio.NewReader(f)
+func getTotalScore(data []byte) float64 {
+	reader := bufio.NewReader(bytes.NewBuffer(data))
 	var stats []Statistics
 	for {
 		line, err := reader.ReadString('\n')
@@ -93,18 +86,6 @@ func getTotalScore() float64 {
 	}
 
 	return computeTotalScore(stats)
-}
-
-func writeStats(data []byte) {
-	filename := getStatsFile()
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	must(1)(f.Write(data))
-	must(1)(f.Write([]byte("\n")))
 }
 
 func formatStats(phrase *Phrase, now time.Time) []byte {
@@ -133,21 +114,5 @@ func formatStats(phrase *Phrase, now time.Time) []byte {
 		panic(err)
 	}
 
-	return data
-}
-
-func logStats(phrase Phrase, key termbox.Key, now time.Time) {
-	if key != termbox.KeyEnter || phrase.Input != phrase.Text {
-		return
-	}
-
-	writeStats(formatStats(&phrase, now))
-}
-
-func getStatsFile() string {
-	if name := os.Getenv("STATSFILE"); name != "" {
-		return name
-	}
-
-	return os.Getenv("HOME") + "/.gotypist.stats"
+	return append(data, '\n')
 }

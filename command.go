@@ -30,15 +30,28 @@ type ReadFile struct {
 	Error    func(error) Message
 }
 
+type AppendFile struct {
+	Filename string
+	Data     []byte
+	Success  func() Message
+	Error    func(error) Message
+}
+
 type Exit struct {
 	Status         int
 	GoodbyeMessage string
+}
+
+func PassError(err error) Message {
+	return err
 }
 
 func RunCommand(cmd Command) []Message {
 	switch c := cmd.(type) {
 	case ReadFile:
 		return readFile(c.Filename, c.Success, c.Error)
+	case AppendFile:
+		return appendFile(c.Filename, c.Data, c.Success, c.Error)
 	case Interrupt:
 		return interrupt(c.Delay)
 	case PeriodicInterrupt:
@@ -53,10 +66,36 @@ func RunCommand(cmd Command) []Message {
 
 var noMessages = []Message{}
 
+func appendFile(filename string, data []byte, success func() Message, error func(error) Message) []Message {
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		if error != nil {
+			return []Message{error(err)}
+		}
+	}
+	defer f.Close()
+
+	if _, err := f.Write(data); err != nil {
+		if error != nil {
+			return []Message{error(err)}
+		}
+		return noMessages
+	}
+
+	if success == nil {
+		return noMessages
+	}
+
+	return []Message{success()}
+}
+
 func readFile(filename string, success func([]byte) Message, error func(error) Message) []Message {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return []Message{error(err)}
+		if error != nil {
+			return []Message{error(err)}
+		}
+		return noMessages
 	}
 	return []Message{success(content)}
 }

@@ -35,6 +35,7 @@ type State struct {
 	HideFingers      bool
 	Repeat           bool
 	RageQuit         bool
+	Statsfile        string
 	Score            float64
 	LastScore        float64
 	LastScorePercent float64
@@ -42,8 +43,20 @@ type State struct {
 }
 
 func reduce(s State, msg Message, now time.Time) (State, []Command) {
-	ev := msg.(termbox.Event)
+	switch m := msg.(type) {
+	case error:
+		return s, []Command{Exit{GoodbyeMessage: m.Error()}}
+	case StatsData:
+		s.Score = getTotalScore(m.Data)
+		return s, Noop
+	case termbox.Event:
+		return reduceEvent(s, m, now)
+	}
 
+	return s, Noop
+}
+
+func reduceEvent(s State, ev termbox.Event, now time.Time) (State, []Command) {
 	if ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC {
 		return s, []Command{Exit{GoodbyeMessage: banner(s, now)}}
 	}
@@ -88,11 +101,17 @@ func reduceEnter(s State, now time.Time) (State, []Command) {
 		return s, Noop
 	}
 
+	logCmd := AppendFile{
+		Filename: s.Statsfile,
+		Data:     formatStats(&s.Phrase, now),
+		Error:    PassError,
+	}
+
 	s.Phrase.CurrentRound().FinishedAt = now
 	if s.Phrase.Mode != ModeNormal {
 		s.Phrase.Mode++
 		s.Phrase.Input = ""
-		return s, Noop
+		return s, []Command{logCmd}
 	}
 
 	s.LastScoreUntil = now.Add(ScoreHighlightDuration)
@@ -102,7 +121,7 @@ func reduceEnter(s State, now time.Time) (State, []Command) {
 	s.Score += score
 	s = resetPhrase(s, false)
 
-	return s, []Command{Interrupt{ScoreHighlightDuration}}
+	return s, []Command{logCmd, Interrupt{ScoreHighlightDuration}}
 }
 
 func reduceCharInput(s State, ev termbox.Event, now time.Time) (State, []Command) {

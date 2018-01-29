@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/nsf/termbox-go"
 )
 
-func Init(args []string) (State, []Command) {
+func Init(args []string, env map[string]string) (State, []Command) {
 	commandLine := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
 	commandLine.String("w", "/usr/share/dict/words", "load word list from `FILE`")
@@ -29,8 +30,16 @@ func Init(args []string) (State, []Command) {
 	}
 
 	state := *NewState(time.Now().UnixNano(), StaticPhrase("somethings happenin in here"))
-	state.Score = getTotalScore()
-	return state, []Command{PeriodicInterrupt{250 * time.Millisecond}}
+	home, _ := env["HOME"]
+	state.Statsfile = home + "/.gotypist.stats"
+
+	return state, []Command{
+		ReadFile{
+			Filename: state.Statsfile,
+			Success:  func(data []byte) Message { return StatsData{Data: data} },
+		},
+		PeriodicInterrupt{250 * time.Millisecond},
+	}
 }
 
 func main() {
@@ -43,13 +52,13 @@ func main() {
 	if len(os.Args) == 2 && os.Args[1] == "-d" {
 		runDemo()
 	} else {
-		loop(os.Args)
+		loop(os.Args, env())
 	}
 }
 
-func loop(args []string) {
+func loop(args []string, env map[string]string) {
 	msgs := []Message{}
-	state, cmds := Init(args)
+	state, cmds := Init(args, env)
 
 	render(state, time.Now())
 
@@ -89,6 +98,17 @@ func selectMessage(msgs []Message) (Message, []Message, bool) {
 	}
 
 	return nil, msgs, false
+}
+
+func env() map[string]string {
+	vars := map[string]string{}
+
+	for _, v := range os.Environ() {
+		pair := strings.SplitN(v, "=", 2)
+		vars[pair[0]] = pair[1]
+	}
+
+	return vars
 }
 
 // needs porting

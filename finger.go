@@ -2,6 +2,8 @@ package main
 
 type Finger int
 
+var FingerMap map[rune]Finger
+
 const (
 	NoFinger Finger = 0
 
@@ -23,7 +25,7 @@ var FingerSequence = []Finger{
 	RightThumb, RightIndex, RightMiddle, RightRing, RightPinky,
 }
 
-var preMap = map[Finger]string{
+var sourceMap = map[Finger]string{
 	LeftPinky:   "1qaz",
 	LeftRing:    "2wsx",
 	LeftMiddle:  "3edc",
@@ -36,19 +38,15 @@ var preMap = map[Finger]string{
 	RightPinky:  "0p",
 }
 
-var FingerMap = compileFingerMap()
+func init() {
+	FingerMap = make(map[rune]Finger)
 
-func compileFingerMap() map[rune]Finger {
-	m := make(map[rune]Finger)
-
-	for finger, runes := range preMap {
+	for finger, runes := range sourceMap {
 		for _, r := range runes {
-			if _, ok := m[r]; !ok {
-				m[r] = NoFinger
+			if _, ok := FingerMap[r]; !ok {
+				FingerMap[r] = NoFinger
 			}
-			m[r] |= finger
+			FingerMap[r] |= finger
 		}
 	}
-
-	return m
 }

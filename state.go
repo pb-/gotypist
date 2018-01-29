@@ -29,6 +29,8 @@ type Phrase struct {
 }
 
 type State struct {
+	Codelines        bool
+	NumberProb       float64
 	Seed             int64
 	PhraseGenerator  PhraseFunc
 	Phrase           Phrase
@@ -46,6 +48,8 @@ func reduce(s State, msg Message, now time.Time) (State, []Command) {
 	switch m := msg.(type) {
 	case error:
 		return s, []Command{Exit{GoodbyeMessage: m.Error()}}
+	case Datasource:
+		return reduceDatasource(s, m.Data, now)
 	case StatsData:
 		s.Score = getTotalScore(m.Data)
 		return s, Noop
@@ -169,6 +173,32 @@ func reduceCharInput(s State, ev termbox.Event, now time.Time) (State, []Command
 	// normal mode
 	s.Phrase.Input += string(ch)
 	return s, Noop
+}
+
+func reduceDatasource(state State, data []byte, now time.Time) (State, []Command) {
+	var items []string
+	var err error
+
+	if state.Codelines {
+		items, err = loadCodeFile(data)
+	} else {
+		items, err = loadDictionary(data)
+	}
+
+	if err != nil {
+		return state, []Command{Exit{GoodbyeMessage: err.Error()}}
+	} else if len(items) == 0 {
+		return state, []Command{Exit{GoodbyeMessage: "datafile contains no usable data"}}
+	}
+
+	if state.Codelines {
+		state.PhraseGenerator = SequentialLine(items)
+	} else {
+		state.Seed = now.UnixNano()
+		state.PhraseGenerator = RandomPhrase(items, 30, state.NumberProb)
+	}
+
+	return resetPhrase(state, false), Noop
 }
 
 func resetPhrase(state State, forceNext bool) State {

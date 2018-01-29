@@ -11,12 +11,13 @@ import (
 )
 
 func Init(args []string, env map[string]string) (State, []Command) {
-	commandLine := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	state := *NewState(0, DefaultPhrase)
 
-	commandLine.String("w", "/usr/share/dict/words", "load word list from `FILE`")
-	commandLine.String("c", "", "load code from `FILE`")
+	commandLine := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	datafile := commandLine.String("f", "/usr/share/dict/words", "load word list from `FILE`")
+	commandLine.BoolVar(&state.Codelines, "c", false, "treat -f FILE as lines of code")
 	commandLine.Bool("d", false, "demo mode for screenshot")
-	commandLine.Float64("n", 0, "mix in numbers with `PROBABILITY` (use with -w)")
+	commandLine.Float64Var(&state.NumberProb, "n", 0, "mix in numbers with `PROBABILITY`")
 
 	err := commandLine.Parse(args[1:])
 	if err != nil {
@@ -29,11 +30,20 @@ func Init(args []string, env map[string]string) (State, []Command) {
 		return State{}, []Command{Exit{Status: 1, GoodbyeMessage: err.Error()}}
 	}
 
-	state := *NewState(time.Now().UnixNano(), StaticPhrase("somethings happenin in here"))
+	if len(commandLine.Args()) > 0 {
+		state.PhraseGenerator = StaticPhrase(strings.Join(commandLine.Args(), " "))
+		state = resetPhrase(state, false)
+	}
+
 	home, _ := env["HOME"]
 	state.Statsfile = home + "/.gotypist.stats"
 
 	return state, []Command{
+		ReadFile{
+			Filename: *datafile,
+			Success:  func(data []byte) Message { return Datasource{Data: data} },
+			Error:    PassError,
+		},
 		ReadFile{
 			Filename: state.Statsfile,
 			Success:  func(data []byte) Message { return StatsData{Data: data} },
@@ -110,25 +120,3 @@ func env() map[string]string {
 
 	return vars
 }
-
-// needs porting
-//	var phraseFunc PhraseFunc
-//	if len(flag.Args()) > 0 {
-//		phraseFunc = StaticPhrase(strings.Join(flag.Args(), " "))
-//	} else {
-//		if *codeFile != "" {
-//			lines, err := loadCodeFile(*codeFile)
-//			if err != nil || len(lines) == 0 {
-//				phraseFunc = DefaultPhrase
-//			} else {
-//				phraseFunc = SequentialLine(lines)
-//			}
-//		} else {
-//			dict, err := loadDictionary(*wordFile)
-//			if err != nil || len(dict) == 0 {
-//				phraseFunc = DefaultPhrase
-//			} else {
-//				phraseFunc = RandomPhrase(dict, 30, *numberProb)
-//			}
-//		}
-//	}

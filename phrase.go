@@ -1,11 +1,12 @@
+// only pure code in this file (no side effects)
 package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"math/rand"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -54,8 +55,8 @@ func SequentialLine(lines []string) PhraseFunc {
 	}
 }
 
-func loadDictionary(path string) ([]string, error) {
-	lines, err := readLines(path)
+func loadDictionary(data []byte) ([]string, error) {
+	lines, err := readLines(data)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +64,8 @@ func loadDictionary(path string) ([]string, error) {
 	return filterWords(lines, `^[a-z]+$`, 8), nil
 }
 
-func loadCodeFile(path string) ([]string, error) {
-	lines, err := readLines(path)
+func loadCodeFile(data []byte) ([]string, error) {
+	lines, err := readLines(data)
 	if err != nil {
 		return nil, err
 	}
@@ -86,16 +87,10 @@ func filterWords(words []string, pattern string, maxLength int) []string {
 	return filtered
 }
 
-func readLines(path string) ([]string, error) {
+func readLines(data []byte) ([]string, error) {
 	var lines []string
 
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open line file: %s", err)
-	}
-	defer file.Close()
-
-	reader := bufio.NewReader(file)
+	reader := bufio.NewReader(bytes.NewBuffer(data))
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {

@@ -26,16 +26,16 @@ var FingerSequence = []Finger{
 }
 
 var sourceMap = map[Finger]string{
-	LeftPinky:   "1qaz",
-	LeftRing:    "2wsx",
-	LeftMiddle:  "3edc",
-	LeftIndex:   "4rfv5tgb",
+	LeftPinky:   "1qaz`~!",
+	LeftRing:    "2wsx@",
+	LeftMiddle:  "3edc#",
+	LeftIndex:   "4rfv5tgb$%",
 	LeftThumb:   " ",
 	RightThumb:  " ",
-	RightIndex:  "6yhn7ujm",
-	RightMiddle: "8ik",
-	RightRing:   "9ol",
-	RightPinky:  "0p",
+	RightIndex:  "6yhn7ujm^&",
+	RightMiddle: "8ik*,<",
+	RightRing:   "9ol(.>",
+	RightPinky:  "0p)-_=+[{]}'\"/?",
 }
 
 func init() {

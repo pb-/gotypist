@@ -57,6 +57,7 @@ func main() {
 		}
 	}()
 
+	seed := time.Now().UnixNano()
 	var phraseFunc PhraseFunc
 	if len(flag.Args()) > 0 {
 		phraseFunc = StaticPhrase(strings.Join(flag.Args(), " "))
@@ -66,6 +67,7 @@ func main() {
 			if err != nil || len(lines) == 0 {
 				phraseFunc = DefaultPhrase
 			} else {
+				seed = 0
 				phraseFunc = SequentialLine(lines)
 			}
 		} else {
@@ -78,7 +80,7 @@ func main() {
 		}
 	}
 
-	state := *NewState(time.Now().UnixNano(), phraseFunc)
+	state := *NewState(seed, phraseFunc)
 	state.Score = getTotalScore()
 	rageQuit := loop(state)
 

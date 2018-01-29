@@ -11,24 +11,24 @@ import (
 	"strings"
 )
 
-// PhraseFunc generates a phrase from a seed.
-type PhraseFunc func(seed int64) string
+// PhraseFunc generates a phrase from a seed and returns the next seed.
+type PhraseFunc func(seed int64) (int64, string)
 
 // DefaultPhrase generates a built-in fallback phrase.
-func DefaultPhrase(seed int64) string {
-	return "the quick brown fox jumps over the lazy dog"
+func DefaultPhrase(seed int64) (int64, string) {
+	return seed, "the quick brown fox jumps over the lazy dog"
 }
 
 // StaticPhrase returns a static phrase generator function with given phrase.
 func StaticPhrase(phrase string) PhraseFunc {
-	return func(seed int64) string {
-		return phrase
+	return func(seed int64) (int64, string) {
+		return seed, phrase
 	}
 }
 
 // RandomPhrase composes a random phrase with given length from given words.
 func RandomPhrase(words []string, minLength int, numProb float64) PhraseFunc {
-	return func(seed int64) string {
+	return func(seed int64) (int64, string) {
 		rand := rand.New(rand.NewSource(seed))
 		var phrase []string
 		l := -1
@@ -42,17 +42,15 @@ func RandomPhrase(words []string, minLength int, numProb float64) PhraseFunc {
 			phrase = append(phrase, w)
 			l += 1 + len(w)
 		}
-		return strings.Join(phrase, " ")
+		return rand.Int63(), strings.Join(phrase, " ")
 	}
 }
 
 // SequentialLine goes through a sequence of lines.
 func SequentialLine(lines []string) PhraseFunc {
-	index := 0
-	return func(_ int64) string {
-		line := lines[index]
-		index = (index + 1) % len(lines)
-		return line
+	return func(seed int64) (int64, string) {
+		line := lines[seed%int64(len(lines))]
+		return (seed + 1) % int64(len(lines)), line
 	}
 }
 

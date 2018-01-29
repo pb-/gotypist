@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math/rand"
 	"time"
 	"unicode/utf8"
 
@@ -159,9 +158,11 @@ func reduceCharInput(s State, ev termbox.Event, now time.Time) State {
 
 func resetPhrase(state State, forceNext bool) State {
 	if !state.Repeat || forceNext {
-		state.Seed = nextSeed(state.Seed)
+		next, _ := state.PhraseGenerator(state.Seed)
+		state.Seed = next
 	}
-	state.Phrase = *NewPhrase(state.PhraseGenerator(state.Seed))
+	_, phrase := state.PhraseGenerator(state.Seed)
+	state.Phrase = *NewPhrase(phrase)
 
 	return state
 }
@@ -253,8 +254,4 @@ func (p *Phrase) expected() rune {
 
 	expected, _ := utf8.DecodeRuneInString(p.Text[len(p.Input):])
 	return expected
-}
-
-func nextSeed(seed int64) int64 {
-	return rand.New(rand.NewSource(seed)).Int63()
 }

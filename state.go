@@ -176,27 +176,24 @@ func reduceCharInput(s State, ev termbox.Event, now time.Time) (State, []Command
 }
 
 func reduceDatasource(state State, data []byte, now time.Time) (State, []Command) {
-	var items []string
-	var err error
+	var generator func([]string) PhraseFunc
+	var filter func([]string) []string
 
 	if state.Codelines {
-		items, err = loadCodeFile(data)
+		filter = func(items []string) []string { return filterWords(items, `^[^/][^/]`, 80) }
+		generator = SequentialLine
 	} else {
-		items, err = loadDictionary(data)
+		filter = func(items []string) []string { return filterWords(items, `^[a-z]+$`, 8) }
+		generator = func(words []string) PhraseFunc { return RandomPhrase(words, 30, state.NumberProb) }
+		state.Seed = now.UnixNano()
 	}
 
-	if err != nil {
-		return state, []Command{Exit{GoodbyeMessage: err.Error()}}
-	} else if len(items) == 0 {
+	items := filter(readLines(data))
+	if len(items) == 0 {
 		return state, []Command{Exit{GoodbyeMessage: "datafile contains no usable data"}}
 	}
 
-	if state.Codelines {
-		state.PhraseGenerator = SequentialLine(items)
-	} else {
-		state.Seed = now.UnixNano()
-		state.PhraseGenerator = RandomPhrase(items, 30, state.NumberProb)
-	}
+	state.PhraseGenerator = generator(items)
 
 	return resetPhrase(state, false), Noop
 }

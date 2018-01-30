@@ -4,7 +4,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"math/rand"
 	"regexp"
@@ -55,24 +54,6 @@ func SequentialLine(lines []string) PhraseFunc {
 	}
 }
 
-func loadDictionary(data []byte) ([]string, error) {
-	lines, err := readLines(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return filterWords(lines, `^[a-z]+$`, 8), nil
-}
-
-func loadCodeFile(data []byte) ([]string, error) {
-	lines, err := readLines(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return filterWords(lines, `^[^/][^/]`, 80), nil
-}
-
 func filterWords(words []string, pattern string, maxLength int) []string {
 	filtered := make([]string, 0)
 	compiled := regexp.MustCompile(pattern)
@@ -87,7 +68,7 @@ func filterWords(words []string, pattern string, maxLength int) []string {
 	return filtered
 }
 
-func readLines(data []byte) ([]string, error) {
+func readLines(data []byte) []string {
 	var lines []string
 
 	reader := bufio.NewReader(bytes.NewBuffer(data))
@@ -95,12 +76,12 @@ func readLines(data []byte) ([]string, error) {
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				return lines, nil
+				return lines
 			}
-			return nil, fmt.Errorf("failed to read lines: %s", err)
+			panic(err) // io error unlikely on buffer
 		}
 		lines = append(lines, line[:len(line)-1])
 	}
 
-	return lines, nil
+	return lines
 }

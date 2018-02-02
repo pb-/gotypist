@@ -72,6 +72,7 @@ func appendFile(filename string, data []byte, success func() Message, error func
 		if error != nil {
 			return []Message{error(err)}
 		}
+		return noMessages
 	}
 	defer f.Close()
 

@@ -164,8 +164,8 @@ func reduceCharInput(s State, ev termbox.Event, now time.Time) (State, []Command
 	if s.Phrase.Mode == ModeSlow {
 		s.Phrase.Input = ""
 		cmds := []Command{}
-		for t := time.Duration(1); t <= FailPenaltySeconds; t++ {
-			cmds = append(cmds, Interrupt{t * time.Second})
+		for t := 1; t <= FailPenaltySeconds; t++ {
+			cmds = append(cmds, Interrupt{time.Duration(t) * time.Second})
 		}
 		return s, cmds
 	}

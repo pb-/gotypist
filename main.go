@@ -23,47 +23,43 @@ func main() {
 }
 
 func loop(args []string, env map[string]string) {
-	msgs := []Message{}
 	state, cmds := Init(args, env)
-
-	render(state, time.Now())
+	state = runCommands(state, cmds)
 
 	for {
-		if len(cmds) > 0 {
-			newMsgs := RunCommand(cmds[0])
-			msgs = append(msgs, newMsgs...)
-			cmds = cmds[1:]
-		}
-
-		msg, newMsgs, ok := selectMessage(msgs)
-		msgs = newMsgs
-
-		now := time.Now()
-		if ok {
-			newState, newCmds := reduce(state, msg, now)
-			state = newState
-			cmds = append(cmds, newCmds...)
-		}
-
-		render(state, now)
+		render(state, time.Now())
+		state = reduceMessages(state, waitForEvent(), time.Now())
 	}
 }
 
-func selectMessage(msgs []Message) (Message, []Message, bool) {
-	if len(msgs) > 0 {
-		return msgs[0], msgs[1:], true
+func runCommands(state State, commands []Command) State {
+	for _, command := range commands {
+		state = reduceMessages(state, RunCommand(command), time.Now())
 	}
 
+	return state
+}
+
+func reduceMessages(state State, messages []Message, now time.Time) State {
+	for _, message := range messages {
+		newState, commands := reduce(state, message, time.Now())
+		state = runCommands(newState, commands)
+	}
+
+	return state
+}
+
+func waitForEvent() []Message {
 	ev := termbox.PollEvent()
 	switch ev.Type {
 	case termbox.EventKey:
-		return ev, msgs, true
+		return []Message{ev}
 	case termbox.EventError:
 		panic(ev.Err)
 	case termbox.EventInterrupt:
 	}
 
-	return nil, msgs, false
+	return []Message{}
 }
 
 func env() map[string]string {

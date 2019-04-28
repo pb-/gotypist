@@ -90,11 +90,21 @@ func appendFile(filename string, data []byte, success func() Message, error func
 	return []Message{success()}
 }
 
-func readFile(filename string, success func([]byte) Message, error func(error) Message) []Message {
-	content, err := ioutil.ReadFile(filename)
+func readFile(filename string, success func([]byte) Message, errorFunc func(error) Message) []Message {
+	var (
+		content []byte
+		err     error
+	)
+
+	if filename == "-" {
+		content, err = ioutil.ReadAll(os.Stdin)
+	} else {
+		content, err = ioutil.ReadFile(filename)
+	}
+
 	if err != nil {
-		if error != nil {
-			return []Message{error(err)}
+		if errorFunc != nil {
+			return []Message{errorFunc(err)}
 		}
 		return noMessages
 	}

@@ -16,8 +16,20 @@ This project was mainly motivated by trying out [termbox-go](https://github.com/
 
 ## Installation
 
-```
+### From source
+
+```bash
 go get github.com/pb-/gotypist
+```
+
+### Using a package manager
+
+#### Debian
+
+Grab `.deb` from [barnumbirr/gotypist-debian](https://github.com/barnumbirr/gotypist-debian/releases), then
+
+```bash
+dpkg -i gotypist_<version>_amd64_<debian_version>.deb
 ```
 
 ## Usage

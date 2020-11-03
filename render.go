@@ -93,16 +93,34 @@ func render(s State, now time.Time) {
 	seconds, _, _ := computeStats(
 		s.Phrase.Input[:byteOffset], s.Phrase.CurrentRound().StartedAt, now)
 
-	errorsText := text("%3d errors", s.Phrase.CurrentRound().Errors).
-		Y(h/2 + statsYOffset(!s.HideFingers)).Fg(s.Phrase.ErrorCountColor(now))
+	errorsText := text("%3d errors",
+		s.Phrase.CurrentRound().Errors,
+	).
+		Y(h/2 + statsYOffset(!s.HideFingers)).
+		Fg(s.Phrase.ErrorCountColor(now))
+
+	// Add expected / actual if we are within the FailPenaltyDuration
+	if now.Sub(s.Phrase.CurrentRound().FailedAt) < FailPenaltyDuration {
+		typo := Typo{}
+		if len(s.Phrase.CurrentRound().Typos) > 0 {
+			s.Phrase.expected()
+			typos := s.Phrase.CurrentRound().Typos
+			typo = typos[len(typos)-1]
+			errorsText.text += fmt.Sprintf(" | expected: %s | actual : %s",
+				spaced(typo.Expected),
+				spaced(typo.Actual),
+			)
+		}
+	}
+
 	secondsText := text("%4.1f seconds", seconds).
-		Y(h/2 + statsYOffset(!s.HideFingers))
+		Y(h/2 + statsYOffset(!s.HideFingers) + 1)
 
 	if s.Phrase.Mode == ModeSlow {
 		write(errorsText.X(w / 2).Align(Center))
 	} else {
-		write(errorsText.X(w/2 - 1).Align(Right))
-		write(secondsText.X(w/2 + 1))
+		write(errorsText.X(w / 2).Align(Center))
+		write(secondsText.X(w / 2))
 	}
 
 	write(text("What's this fast, slow, medium thing?!").X(1).Y(h - 3))

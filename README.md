@@ -18,6 +18,8 @@ This project was mainly motivated by trying out [termbox-go](https://github.com/
 
 ### From source
 
+Go version 1.16 or newer is required.
+
 ```bash
 go get github.com/pb-/gotypist
 ```

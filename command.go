@@ -2,6 +2,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,6 +10,9 @@ import (
 
 	"github.com/nsf/termbox-go"
 )
+
+//go:embed dictionary
+var builtinDictionary []byte
 
 type Message interface{}
 
@@ -42,6 +46,8 @@ type Exit struct {
 	GoodbyeMessage string
 }
 
+type LoadBuiltinDictionary struct{}
+
 func PassError(err error) Message {
 	return err
 }
@@ -58,6 +64,8 @@ func RunCommand(cmd Command) []Message {
 		return periodicInterrupt(c.Period)
 	case Exit:
 		return exit(c.Status, c.GoodbyeMessage)
+	case LoadBuiltinDictionary:
+		return loadBuiltinDictionary()
 	}
 
 	exit(1, fmt.Sprintf("Cannot handle command of type %T", cmd))
@@ -109,6 +117,10 @@ func readFile(filename string, success func([]byte) Message, errorFunc func(erro
 		return noMessages
 	}
 	return []Message{success(content)}
+}
+
+func loadBuiltinDictionary() []Message {
+	return []Message{Datasource{Data: builtinDictionary}}
 }
 
 func periodicInterrupt(d time.Duration) []Message {

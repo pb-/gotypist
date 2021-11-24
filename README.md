@@ -39,7 +39,7 @@ dpkg -i gotypist_<version>_amd64_<debian_version>.deb
     gotypist [-f FILE] [-s] [-n PROB] [-c] [WORD]...
 
     WORD...     Explicitly specify a phrase
-    -f FILE     Use FILE instead of /usr/share/dict/words as data source
+    -f FILE     Use FILE instead of a built-in dictionary
     -n PROB     Sprinkle in random numbers with probability 0 <= PROB <= 1
     -c          Tread -f FILE as code and go sequenntially through the lines
     -d          Run in demo mode to take a screenshot
